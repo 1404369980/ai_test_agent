@@ -4,30 +4,54 @@
       <h1 class="home-title">PayKKa 测试平台</h1>
       <p class="home-subtitle">选择要使用的测试功能</p>
       
-      <div class="button-grid">
-        <button @click="goToApiTest" class="home-button api-test-btn">
-          <div class="button-icon">🔌</div>
-          <div class="button-content">
-            <h3>API接口测试</h3>
-            <p>测试PayKKa交易接口</p>
-          </div>
-        </button>
-        
-        <button @click="goToHostedTest" class="home-button hosted-test-btn">
-          <div class="button-icon">🛒</div>
-          <div class="button-content">
-            <h3>Hosted测试页面</h3>
-            <p>PayKKa收银台页面测试</p>
-          </div>
-        </button>
-        
-        <button @click="goToUserConfig" class="home-button config-btn">
-          <div class="button-icon">⚙️</div>
-          <div class="button-content">
-            <h3>商户配置</h3>
-            <p>管理商户ID、App ID和私钥</p>
-          </div>
-        </button>
+      <div class="payment-products-section">
+        <h2 class="section-title">支付产品测试</h2>
+        <div class="button-grid">
+          <button @click="goToApiTest" class="home-button api-test-btn">
+            <div class="button-icon">🔌</div>
+            <div class="button-content">
+              <h3>API 接口测试</h3>
+              <p>完全自主控制流程，通过API发起付款请求</p>
+            </div>
+          </button>
+          
+          <button @click="goToHostedTest" class="home-button hosted-test-btn">
+            <div class="button-icon">🛒</div>
+            <div class="button-content">
+              <h3>Hosted 测试页面</h3>
+              <p>跳转至我们的托管支付页面，快速完成收款</p>
+            </div>
+          </button>
+          
+          <button @click="goToDropInTest" class="home-button dropin-test-btn">
+            <div class="button-icon">📦</div>
+            <div class="button-content">
+              <h3>Drop-in 测试页面</h3>
+              <p>在您的网站嵌入可定制的支付组件</p>
+            </div>
+          </button>
+          
+          <button @click="goToComponentTest" class="home-button component-test-btn">
+            <div class="button-icon">🎨</div>
+            <div class="button-content">
+              <h3>Component 测试页面</h3>
+              <p>通过高度定制化的UI，无缝融入商户页面</p>
+            </div>
+          </button>
+        </div>
+      </div>
+      
+      <div class="config-section">
+        <h2 class="section-title">系统配置</h2>
+        <div class="button-grid">
+          <button @click="goToUserConfig" class="home-button config-btn">
+            <div class="button-icon">⚙️</div>
+            <div class="button-content">
+              <h3>商户配置</h3>
+              <p>管理商户ID、App ID和私钥</p>
+            </div>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -42,6 +66,14 @@ const goToApiTest = () => {
 
 const goToHostedTest = () => {
   emit('navigate', 'hosted-test')
+}
+
+const goToDropInTest = () => {
+  emit('navigate', 'dropin-test')
+}
+
+const goToComponentTest = () => {
+  emit('navigate', 'component-test')
 }
 
 const goToUserConfig = () => {
@@ -79,7 +111,22 @@ const goToUserConfig = () => {
 .home-subtitle {
   font-size: 1.1rem;
   color: #666;
+  margin-bottom: 2rem;
+}
+
+.payment-products-section,
+.config-section {
   margin-bottom: 3rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  text-align: left;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e0e0e0;
 }
 
 .button-grid {
@@ -116,6 +163,16 @@ const goToUserConfig = () => {
 
 .hosted-test-btn:hover {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.dropin-test-btn:hover {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
+
+.component-test-btn:hover {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
   color: white;
 }
 

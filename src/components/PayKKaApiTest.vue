@@ -183,10 +183,9 @@ const selectedMerchantId = ref('')
 // 加载商户配置列表
 const loadMerchantConfigs = () => {
   merchantConfigs.value = getAllConfigs()
-  // 如果有默认配置，自动选择
+  // 如果有配置，自动选择第一个
   if (merchantConfigs.value.length > 0 && !selectedMerchantId.value) {
-    const defaultConfig = merchantConfigs.value.find(c => c.merchantId === apiConfig.merchantId) || merchantConfigs.value[0]
-    selectedMerchantId.value = defaultConfig.merchantId
+    selectedMerchantId.value = merchantConfigs.value[0].merchantId
     onMerchantChange()
   }
 }
@@ -199,8 +198,9 @@ const onMerchantChange = () => {
   
   const config = getConfigByMerchantId(selectedMerchantId.value)
   if (config) {
+    apiConfig.baseUrl = config.baseUrl || 'https://api.paykka.com'
     apiConfig.merchantId = config.merchantId
-    // PayKKaTest使用apiKey，这里用privateKey填充
+    // PayKKaApiTest使用apiKey，这里用privateKey填充
     apiConfig.apiKey = config.privateKey
   }
 }

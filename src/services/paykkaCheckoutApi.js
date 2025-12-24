@@ -82,22 +82,12 @@ export async function createCheckout(baseUrl, merchantId, checkoutData, headers 
       merchant_id: merchantId, // 确保 merchant_id 使用传入的 merchantId
     }
 
-    // 如果使用新的请求头签名方式，不需要在body中添加sign
-    // 否则使用旧的MD5签名方式（兼容）
-    let signedParams = { ...requestParams }
-    
-    if (!headers || !headers.privateKey) {
-      // 如果没有提供请求头配置，使用旧的签名方式（需要secretKey，但现在已经移除）
-      // 这里保留兼容性，但实际应该使用新的请求头签名方式
-      console.warn('建议使用新的请求头签名方式（提供privateKey）')
-    }
-
     // 构建请求头
     const requestHeaders = {
       'Content-Type': 'application/json'
     }
     
-    // 使用新的请求头签名方式（必须提供）
+    // 验证必须的请求头参数
     if (!headers || !headers.privateKey) {
       throw new Error('必须提供私钥（privateKey）用于生成请求头签名')
     }
@@ -125,34 +115,27 @@ export async function createCheckout(baseUrl, merchantId, checkoutData, headers 
     requestHeaders['x-paykka-sign-alg'] = headers.signAlg || 'SHA256_WITH_RSA'
     
     // 如果已有签名，直接使用；否则生成签名
+    const requestBody = JSON.stringify(requestParams)
     if (headers.sign) {
-      console.log('========== 使用已有签名 ==========')
-      console.log('签名:', headers.sign)
       requestHeaders['x-paykka-sign'] = headers.sign
     } else {
-      const requestBody = JSON.stringify(signedParams)
-      console.log('========== 开始生成签名 ==========')
       const sign = await generateHeaderSign(
         'POST',
         '/v3/payment/acq/session',
         timestamp,
         nonce,
         requestBody,
-        headers.privateKey
+        headers.privateKey,
+        false // 禁用日志输出
       )
       requestHeaders['x-paykka-sign'] = sign
     }
-    
-    // 打印最终请求头
-    console.log('========== 最终请求头 ==========')
-    console.log('请求头:', JSON.stringify(requestHeaders, null, 2))
-    console.log('================================')
 
     // 发送请求
     const response = await fetch(`${baseUrl}/v3/payment/acq/session`, {
       method: 'POST',
       headers: requestHeaders,
-      body: JSON.stringify(signedParams)
+      body: requestBody
     })
 
     if (!response.ok) {
@@ -165,7 +148,7 @@ export async function createCheckout(baseUrl, merchantId, checkoutData, headers 
     return {
       success: true,
       message: '收银台创建成功',
-      signedData: signedParams,
+      signedData: requestParams,
       requestHeaders: {
         ...requestHeaders,
         // 返回实际使用的timestamp和nonce，方便前端显示

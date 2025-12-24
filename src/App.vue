@@ -1,8 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import HomePage from './components/HomePage.vue'
-import PayKKaTest from './components/PayKKaTest.vue'
+import PayKKaApiTest from './components/PayKKaApiTest.vue'
 import PayKKaCheckoutTest from './components/PayKKaCheckoutTest.vue'
+import PayKKaDropInTest from './components/PayKKaDropInTest.vue'
+import PayKKaComponentTest from './components/PayKKaComponentTest.vue'
 import UserConfig from './components/UserConfig.vue'
 
 const currentPage = ref('home')
@@ -18,8 +20,10 @@ const goBack = () => {
 
 <template>
   <HomePage v-if="currentPage === 'home'" @navigate="handleNavigate" />
-  <PayKKaTest v-else-if="currentPage === 'api-test'" @back="goBack" />
+  <PayKKaApiTest v-else-if="currentPage === 'api-test'" @back="goBack" />
   <PayKKaCheckoutTest v-else-if="currentPage === 'hosted-test'" @back="goBack" />
+  <PayKKaDropInTest v-else-if="currentPage === 'dropin-test'" @back="goBack" />
+  <PayKKaComponentTest v-else-if="currentPage === 'component-test'" @back="goBack" />
   <UserConfig v-else-if="currentPage === 'user-config'" @back="goBack" />
 </template>
 
