@@ -1,9 +1,26 @@
 <script setup>
+import { ref } from 'vue'
+import HomePage from './components/HomePage.vue'
+import PayKKaTest from './components/PayKKaTest.vue'
 import PayKKaCheckoutTest from './components/PayKKaCheckoutTest.vue'
+import UserConfig from './components/UserConfig.vue'
+
+const currentPage = ref('home')
+
+const handleNavigate = (page) => {
+  currentPage.value = page
+}
+
+const goBack = () => {
+  currentPage.value = 'home'
+}
 </script>
 
 <template>
-  <PayKKaCheckoutTest />
+  <HomePage v-if="currentPage === 'home'" @navigate="handleNavigate" />
+  <PayKKaTest v-else-if="currentPage === 'api-test'" @back="goBack" />
+  <PayKKaCheckoutTest v-else-if="currentPage === 'hosted-test'" @back="goBack" />
+  <UserConfig v-else-if="currentPage === 'user-config'" @back="goBack" />
 </template>
 
 <style>

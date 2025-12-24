@@ -4,7 +4,7 @@
  */
 
 import CryptoJS from 'crypto-js'
-import * as forge from 'node-forge'
+import { generateHeaderSign } from './signatureUtils'
 
 /**
  * 生成MD5哈希
@@ -61,100 +61,9 @@ function generateSignature(params, secretKey) {
  * @param {string} privateKeyPem - RSA私钥（PEM格式）
  * @returns {string} Base64编码的签名
  */
-/**
- * 格式化私钥为PEM格式（支持PKCS8 Base64格式）
- * 根据Java实现：私钥是Base64编码的PKCS8格式
- * @param {string} privateKey - 私钥字符串（可能是Base64 PKCS8或PEM格式）
- * @returns {string} PEM格式的私钥
- */
-function formatPrivateKeyToPem(privateKey) {
-  // 移除所有空白字符
-  const cleaned = privateKey.replace(/\s+/g, '')
-  
-  // 如果已经是PEM格式（包含BEGIN和END），直接返回
-  if (cleaned.includes('BEGIN') || cleaned.includes('END')) {
-    return privateKey.trim()
-  }
-  
-  // 如果是纯Base64字符串（PKCS8格式），添加PEM头部和尾部
-  // 每64个字符换行
-  const formatted = cleaned.match(/.{1,64}/g).join('\n')
-  return `-----BEGIN PRIVATE KEY-----\n${formatted}\n-----END PRIVATE KEY-----`
-}
-
-/**
- * 生成请求头签名 (SHA256_WITH_RSA)
- * 根据Java实现优化：
- * 1. 私钥是Base64编码的PKCS8格式
- * 2. 签名内容使用UTF-8编码
- * 3. 使用SHA256_WITH_RSA算法（自动SHA256哈希+RSA签名）
- * 4. 签名结果Base64编码后，进行URL编码
- * 
- * @param {string} method - HTTP方法
- * @param {string} url - URL路径
- * @param {number} timestamp - 时间戳
- * @param {string} nonce - 随机数
- * @param {string} body - 请求消息体（JSON字符串）
- * @param {string} privateKeyBase64 - RSA私钥（Base64编码的PKCS8格式或PEM格式）
- * @returns {string} Base64编码的签名（URL编码）
- */
-export async function generateHeaderSign(method, url, timestamp, nonce, body, privateKeyBase64) {
-  try {
-    // 构建签名字符串：HTTP方法\nURL\n时间戳\n随机数\n消息体
-    const signString = `${method}\n${url}\n${timestamp}\n${nonce}\n${body}`
-    
-    // 打印签名参数
-    console.log('========== 签名参数 ==========')
-    console.log('HTTP方法:', method)
-    console.log('URL:', url)
-    console.log('时间戳:', timestamp)
-    console.log('随机数:', nonce)
-    console.log('消息体:', body)
-    console.log('签名字符串:', signString)
-    console.log('签名字符串（转义显示）:', signString.replace(/\n/g, '\\n'))
-    console.log('签名字符串（UTF-8字节长度）:', new TextEncoder().encode(signString).length)
-    
-    // 格式化私钥为PEM格式（支持Base64 PKCS8格式）
-    const formattedKey = formatPrivateKeyToPem(privateKeyBase64)
-    
-    // 解析PEM格式的私钥（node-forge会自动处理PKCS8格式）
-    const privateKey = forge.pki.privateKeyFromPem(formattedKey)
-    
-    // 根据Java实现：Signature.update(content.getBytes(StandardCharsets.UTF_8))
-    // 然后使用SHA256_WITH_RSA算法签名
-    // 这相当于：对内容进行SHA256哈希，然后用RSA私钥签名
-    
-    // 创建SHA256消息摘要
-    const md = forge.md.sha256.create()
-    // 使用UTF-8编码更新内容（与Java的getBytes(StandardCharsets.UTF_8)对应）
-    md.update(signString, 'utf8')
-    
-    // 使用私钥签名（对应Java的signature.sign()）
-    const signature = privateKey.sign(md)
-    
-    // 步骤1：转换为Base64编码（对应Java的Base64Utils.encodeToString(signed)）
-    const signatureBase64 = forge.util.encode64(signature)
-    
-    // 步骤2：对Base64结果进行URL编码（对应Java的URLEncoder.encode(result)）
-    // Java流程：Base64Utils.encodeToString(signed) -> URLEncoder.encode(result)
-    const signatureUrlEncoded = encodeURIComponent(signatureBase64)
-    
-    // 打印签名结果
-    console.log('========== 签名结果 ==========')
-    console.log('步骤1 - 签名（Base64编码）:', signatureBase64)
-    console.log('步骤2 - 签名（URL编码）:', signatureUrlEncoded)
-    console.log('签名长度（Base64）:', signatureBase64.length)
-    console.log('签名长度（URL编码）:', signatureUrlEncoded.length)
-    console.log('================================')
-    
-    // 返回URL编码后的签名（与Java实现一致：先Base64，再URL编码）
-    return signatureUrlEncoded
-  } catch (error) {
-    console.error('签名生成失败:', error)
-    console.error('错误堆栈:', error.stack)
-    throw new Error('签名生成失败: ' + error.message)
-  }
-}
+// generateHeaderSign 已从 './signatureUtils' 导入，无需重复定义
+// 为了保持向后兼容，重新导出
+export { generateHeaderSign }
 
 /**
  * 创建收银台页面
@@ -167,15 +76,10 @@ export async function generateHeaderSign(method, url, timestamp, nonce, body, pr
 export async function createCheckout(baseUrl, merchantId, checkoutData, headers = null) {
   try {
     // checkoutData 已经是下划线命名的对象，直接使用
-    // 但需要处理 payment_methods 数组和 customer/goods 对象
+    // customer 和 goods 已经是对象，不需要额外处理
     const requestParams = {
       ...checkoutData,
       merchant_id: merchantId, // 确保 merchant_id 使用传入的 merchantId
-      // 确保 payment_methods 是字符串格式（如果是数组）
-      payment_methods: Array.isArray(checkoutData.payment_methods) 
-        ? checkoutData.payment_methods.join(',') 
-        : checkoutData.payment_methods,
-      // customer 和 goods 已经是对象，不需要额外处理
     }
 
     // 如果使用新的请求头签名方式，不需要在body中添加sign
@@ -277,13 +181,9 @@ export async function createCheckout(baseUrl, merchantId, checkoutData, headers 
       // 生成模拟签名
       const mockParams = {
         merchant_id: merchantId,
-        order_no: checkoutData.orderNo,
         amount: checkoutData.amount,
         currency: checkoutData.currency,
         session_mode: checkoutData.sessionMode,
-        payment_methods: Array.isArray(checkoutData.paymentMethods) 
-          ? checkoutData.paymentMethods.join(',') 
-          : checkoutData.paymentMethods,
         description: checkoutData.description || '',
         callback_url: checkoutData.callbackUrl || '',
         return_url: checkoutData.returnUrl || '',

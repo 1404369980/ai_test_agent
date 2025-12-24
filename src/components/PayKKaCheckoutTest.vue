@@ -1,7 +1,10 @@
 <template>
   <div class="checkout-test">
     <div class="container">
-      <h1 class="title">PayKKa 收银台页面测试</h1>
+      <div class="header-with-back">
+        <button @click="$emit('back')" class="back-button">← 返回首页</button>
+        <h1 class="title">PayKKa 收银台页面测试</h1>
+      </div>
       
       <div class="test-panel">
         <div class="form-section">
@@ -11,119 +14,84 @@
             <div class="form-group">
               <label>API 地址</label>
               <input 
-                v-model="apiConfig.baseUrl" 
+                :value="apiConfig.baseUrl || (selectedMerchantId ? '' : '请先选择商户配置')" 
                 type="text" 
-                placeholder="https://openapi-dev.paykka.com"
-                class="input-field"
+                readonly
+                placeholder="从商户配置中自动获取"
+                class="input-field readonly"
               />
+              <small class="field-desc">从选择的商户配置中自动获取，无需手动输入</small>
             </div>
 
             <div class="form-group">
               <label>商户ID (Merchant ID)</label>
-              <input 
-                v-model="apiConfig.merchantId" 
-                type="text" 
-                placeholder="请输入商户ID"
+              <select 
+                v-model="selectedMerchantId" 
+                @change="onMerchantChange"
                 class="input-field"
-              />
+              >
+                <option value="">-- 请选择商户 --</option>
+                <option v-for="config in merchantConfigs" :key="config.merchantId" :value="config.merchantId">
+                  {{ config.name || config.merchantId }}
+                </option>
+              </select>
+              <small class="field-desc">从已配置的商户中选择，选择后将自动填充API地址、商户ID、App ID和私钥</small>
             </div>
           </div>
 
           <div class="form-group">
             <label>私钥 (Private Key) <span class="required">*</span></label>
-            <textarea 
-              v-model="apiConfig.privateKey" 
-              placeholder="请输入RSA私钥（支持PEM格式或Base64格式）&#10;示例：MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCzvEZPGgaoixnlUcvV+Mxoefm6z4DGOaSwfXlUwa6VytxivhWmTBs7Pkv/axjIc1qthlc8dWK9orOFjixqzYqBmuXLC9mokIDSIuDwdH1I3ORgPrrwwtloxwR2FfG0qOWNT8GtUZN3obzVVCeS8LriDOBeNB3k8kpe4uIjoevSo7L59XjOyocSs4Rt7kABLr04l9MGQXmYEL65Ww8940/A2YFr0PBFzBEBcVTl/sMRfVEM14oxQXTxShaWjNrBBSEQfVDPXjpvqZiO5gbBjiqyi2dRbs+imFRX74zAdOhiO/2V4Y7W5INqcwi75ytJC1O713Yc1h9ZVrxStNorhlsPAgMBAAECggEAHDhpia36cag1jq4DJTuFTLoqHczK2VTfqN5qmIY4lUhexho2Z//3HpwvbpEwOPjzud8n/1QnBsNvEH88NiDDqInbnr/jkvXtZBEZ5GdF7JTSPtJao8bUQAFPkALuCoGiWUe2jzIJx3Tbo1stQ4MMtMV0zRW9w97PEorpGtMnpdDN1asM9ZuCShDZVKx5NeASD8YNXUv8zXB6+rCNQiJkauj+EzLTKi1rmUiv6r0K3mfrn7tyc6oh1DDhI1R8ijyltOQN781fXrza6hzrgsgKYlL1bekKvcKsbacOeMBa8ezEXof3esrDeYXsNt4vghsxsfqQ8bcRfWA6zKGRE7fQkQKBgQD9K89eM0NBZpq4stADrmv7fE7wD0JQstyxr+JzrsJYrK3KftV/SVK09jy9rRnWZM3iOR58SLz/xR/9iJcUSfTV/RDfDrR+dZQPQtfUf5EN9wGNYopUkui1VxQz34/lKFsrJO7akTH/DqGZWxlg1o3ijGLczS9CW6lDx/26kX4qQwKBgQC1vmdR3wl9KXTPxeuV+g/U/s6a7s2MrCZbeYkg11W+X4SBoZPwCnD0x8cLqwNV+WQZmhPbOlps9F6CPFfMxChTy3saIk20T8KZl+Op1NU6VDWeZvHMpJLbWbxYb3pKkhrIG/RlSfhrRiOXKgLsBqYl+Sn9dw8fwPsjIylsMhE9RQKBgQDIa+hMILT7j2ipExXN9EUT4AL11H6hOBeyqxTQk+bTIFCs39/QVpGdJNpNJj4wFblPf/x8U3Eb4khDA+DmdO3YgfDbRN7qxdYihr4qQZrpvUODVCFCdtK2zGr37eISffI+o4xbh1pXGpQfvZjHqtLEKHMTbXQeSkYjnK1nB0sj1QKBgBORPG6EJPFk1T7JgGPVWH8GMBhePaM3pamTnD/87y5f+lQ6oULm3OJ93+BRuTo4b56SCDFCRxoT9VjwRkO1muHqtoZJyzPuonUG9WwDjjGJf3xeeQofbfBP6QdceT4uHNQOrnF5VVW3Z32O+GGRFbJg8TRo7SfuDxvpXTxY56JBAoGAHf5a+WNcd/PFJ5YS9MCQa1lt6s/ioOKNxRNOvmJ+JLh5WmGy2ke0FUHdLGWZG/u83zaavrFtayrycnudOGG7ZVzihdEPHmbkG9CzwB94jj7rqf43OhwwUhL8Z0QGmOUGtlFJJZHYTs+mJZQc2je8jI8A0sw//q/wMumAQ2fqhlc="
-              class="input-field textarea"
-              rows="6"
-            ></textarea>
-            <small class="field-desc">RSA私钥，支持PEM格式（包含BEGIN/END）或Base64格式（纯字符串），系统会自动识别并转换</small>
+            <div class="private-key-container">
+              <input 
+                v-if="!showPrivateKeyFull"
+                :value="apiConfig.privateKey ? (apiConfig.privateKey.substring(0, 50) + '...') : (selectedMerchantId ? '' : '请先选择商户配置')" 
+                readonly
+                class="input-field readonly"
+                :placeholder="selectedMerchantId ? '从商户配置中自动获取' : '请先选择商户配置'"
+                @click="showPrivateKeyFull = true"
+              />
+              <textarea 
+                v-else
+                :value="apiConfig.privateKey || (selectedMerchantId ? '' : '请先选择商户配置')" 
+                readonly
+                class="input-field textarea readonly"
+                rows="6"
+                :placeholder="selectedMerchantId ? '从商户配置中自动获取' : '请先选择商户配置'"
+              ></textarea>
+              <button 
+                v-if="apiConfig.privateKey" 
+                @click="showPrivateKeyFull = !showPrivateKeyFull" 
+                class="btn-toggle-key"
+                type="button"
+              >
+                {{ showPrivateKeyFull ? '收起' : '展开' }}
+              </button>
+            </div>
+            <small class="field-desc">从选择的商户配置中自动获取，无需手动输入</small>
           </div>
 
           <div class="divider"></div>
 
           <h3>请求头参数 (Headers)</h3>
 
-          <div class="form-row-3">
-            <div class="form-group">
-              <label>x-paykka-appid <span class="required">*</span></label>
-              <input 
-                v-model="apiConfig.appId" 
-                type="text" 
-                placeholder="调用方唯一标识"
-                class="input-field"
-              />
-              <small class="field-desc">Unique identifier of the caller [1,64]</small>
-            </div>
-
-            <div class="form-group">
-              <label>x-paykka-timestamp <span class="required">*</span></label>
-              <input 
-                :value="apiConfig.timestamp || '(生成签名时自动生成)'" 
-                type="text" 
-                readonly
-                class="input-field readonly"
-              />
-              <small class="field-desc">Timestamp in milliseconds [1,11] - 生成签名时自动生成</small>
-            </div>
-
-            <div class="form-group">
-              <label>x-paykka-nonce <span class="required">*</span></label>
-              <input 
-                :value="apiConfig.nonce || '(生成签名时自动生成)'" 
-                type="text" 
-                readonly
-                class="input-field readonly"
-              />
-              <small class="field-desc">Random number for replay prevention [10,100] - 生成签名时自动生成</small>
-            </div>
-          </div>
-
           <div class="form-group">
-            <label>x-paykka-sign-alg</label>
+            <label>x-paykka-appid <span class="required">*</span></label>
             <input 
-              v-model="apiConfig.signAlg" 
+              :value="apiConfig.appId || (selectedMerchantId ? '' : '请先选择商户配置')" 
               type="text" 
-              value="SHA256_WITH_RSA"
               readonly
+              placeholder="从商户配置中自动获取"
               class="input-field readonly"
             />
-            <small class="field-desc">Signature type, fixed value: SHA256_WITH_RSA</small>
+            <small class="field-desc">从选择的商户配置中自动获取，无需手动输入</small>
           </div>
-
-          <div class="form-group">
-            <label>x-paykka-sign <span class="required">*</span></label>
-            <div class="input-with-button">
-              <input 
-                v-model="apiConfig.sign" 
-                type="text" 
-                placeholder="自动生成（基于请求方法、URL、时间戳、随机数、消息体）"
-                class="input-field readonly"
-                readonly
-              />
-              <button @click="generateHeaderSign" class="btn-small">生成签名</button>
-            </div>
-            <small class="field-desc">Request signature [1,500]，签名方法：HTTP方法\nURL\n时间戳\n随机数\n消息体</small>
-          </div>
+          
 
           <div class="divider"></div>
 
           <h3>收银台参数</h3>
 
-          <div class="form-row-2">
-            <div class="form-group">
-              <label>订单号 (Order No) <span class="required">*</span></label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.orderNo" 
-                  type="text" 
-                  placeholder="自动生成"
-                  class="input-field"
-                />
-                <button @click="generateOrderNo" class="btn-small">随机生成</button>
-              </div>
-            </div>
-
+          <div class="form-row-3">
             <div class="form-group">
               <label>交易ID (Trans ID) <span class="required">*</span></label>
               <div class="input-with-button">
@@ -136,82 +104,91 @@
                 <button @click="generateTransId" class="btn-small">随机生成</button>
               </div>
             </div>
-          </div>
 
-          <div class="form-row">
             <div class="form-group">
               <label>交易金额 (Amount)</label>
-              <input 
-                v-model.number="checkoutData.amount" 
-                type="number" 
-                step="0.01"
-                placeholder="0.00"
-                class="input-field"
-              />
-              <button @click="generateRandomAmount" class="btn-small">随机金额</button>
+              <div class="input-with-button">
+                <input 
+                  v-model.number="checkoutData.amount" 
+                  type="number" 
+                  step="0.01"
+                  placeholder="0.00"
+                  class="input-field"
+                />
+                <button @click="generateRandomAmount" class="btn-small">随机金额</button>
+              </div>
             </div>
 
             <div class="form-group">
               <label>币种 (Currency)</label>
-              <select v-model="checkoutData.currency" class="input-field">
-                <option value="USD">USD - 美元</option>
-                <option value="EUR">EUR - 欧元</option>
-                <option value="GBP">GBP - 英镑</option>
-                <option value="CNY">CNY - 人民币</option>
-                <option value="JPY">JPY - 日元</option>
-                <option value="HKD">HKD - 港币</option>
-                <option value="SGD">SGD - 新加坡元</option>
-              </select>
-              <button @click="generateRandomCurrency" class="btn-small">随机币种</button>
+              <div class="input-with-button">
+                <input 
+                  v-model="checkoutData.currency" 
+                  type="text" 
+                  list="currency-list"
+                  placeholder="选择或输入币种"
+                  class="input-field"
+                />
+                <datalist id="currency-list">
+                  <option value="USD">USD - 美元</option>
+                  <option value="EUR">EUR - 欧元</option>
+                  <option value="GBP">GBP - 英镑</option>
+                  <option value="CNY">CNY - 人民币</option>
+                  <option value="JPY">JPY - 日元</option>
+                  <option value="HKD">HKD - 港币</option>
+                  <option value="SGD">SGD - 新加坡元</option>
+                </datalist>
+                <button @click="generateRandomCurrency" class="btn-small">随机币种</button>
+              </div>
             </div>
           </div>
 
           <div class="form-row-2">
             <div class="form-group">
               <label>支付类型 (Payment Type) <span class="required">*</span></label>
-              <select v-model="checkoutData.paymentType" class="input-field">
+              <input 
+                v-model="checkoutData.paymentType" 
+                type="text" 
+                list="payment-type-list"
+                placeholder="选择或输入支付类型"
+                class="input-field"
+              />
+              <datalist id="payment-type-list">
                 <option value="PURCHASE">PURCHASE - 消费</option>
                 <option value="PREPARE_AUTHORIZE">PREPARE_AUTHORIZE - 预授权</option>
                 <option value="RECURRING">RECURRING - 循环支付</option>
                 <option value="REFUND">REFUND - 退款</option>
-              </select>
-              <small class="field-desc">支付类型，默认值：PURCHASE</small>
+              </datalist>
+              <small class="field-desc">默认值：PURCHASE</small>
             </div>
 
             <div class="form-group">
               <label>会话模式 (Session Mode)</label>
-              <select v-model="checkoutData.sessionMode" class="input-field">
+              <input 
+                v-model="checkoutData.sessionMode" 
+                type="text" 
+                list="session-mode-list"
+                placeholder="选择或输入会话模式"
+                class="input-field"
+              />
+              <datalist id="session-mode-list">
                 <option value="HOSTED">HOSTED - 托管模式</option>
                 <option value="COMPONENT">COMPONENT - 组件模式</option>
                 <option value="DROP_IN">DROP_IN - 嵌入模式</option>
-              </select>
+              </datalist>
               <small class="field-desc">默认值：HOSTED</small>
             </div>
           </div>
 
-          <div class="form-row-2">
-            <div class="form-group">
-              <label>支付方式 (Payment Methods)</label>
-              <select v-model="checkoutData.paymentMethods" class="input-field">
-                <option value="">请选择</option>
-                <option value="card">信用卡 (Card)</option>
-                <option value="alipay">支付宝 (Alipay)</option>
-                <option value="wechat">微信支付 (WeChat)</option>
-                <option value="bank_transfer">银行转账 (Bank Transfer)</option>
-              </select>
-              <button @click="generateRandomPaymentMethods" class="btn-small">随机选择</button>
-            </div>
-
-            <div class="form-group">
-              <label>商品描述 (Description)</label>
-              <textarea 
-                v-model="checkoutData.description" 
-                placeholder="请输入商品描述"
-                class="input-field textarea"
-                rows="2"
-              ></textarea>
-              <button @click="generateRandomDescription" class="btn-small">随机描述</button>
-            </div>
+          <div class="form-group">
+            <label>商品描述 (Description)</label>
+            <textarea 
+              v-model="checkoutData.description" 
+              placeholder="请输入商品描述"
+              class="input-field textarea"
+              rows="2"
+            ></textarea>
+            <button @click="generateRandomDescription" class="btn-small" style="margin-top: 0.3rem;">随机描述</button>
           </div>
 
           <div class="form-row-3">
@@ -250,120 +227,65 @@
 
           <div class="section-header">
             <h3>客户信息 (Customer Info) <span class="required">*</span></h3>
-            <label class="toggle-switch">
-              <input type="checkbox" v-model="checkoutData.enableCustomerInfo" />
-              <span class="toggle-slider"></span>
-              <span class="toggle-label">{{ checkoutData.enableCustomerInfo ? '启用' : '禁用' }}</span>
-            </label>
-          </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !checkoutData.enableCustomerInfo }">
-            <div class="form-group">
-              <label>客户邮箱 (Email)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.customerEmail" 
-                  type="email" 
-                  placeholder="customer@example.com"
-                  class="input-field"
-                  :disabled="!checkoutData.enableCustomerInfo"
-                />
-                <button @click="generateRandomEmail" class="btn-small">随机</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>客户电话 (Phone)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.customerPhone" 
-                  type="text" 
-                  placeholder="13800138000"
-                  class="input-field"
-                  :disabled="!checkoutData.enableCustomerInfo"
-                />
-                <button @click="generateRandomPhone" class="btn-small" :disabled="!checkoutData.enableCustomerInfo">随机</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>客户姓名 (Name)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.customerName" 
-                  type="text" 
-                  placeholder="客户姓名"
-                  class="input-field"
-                  :disabled="!checkoutData.enableCustomerInfo"
-                />
-                <button @click="generateRandomName" class="btn-small" :disabled="!checkoutData.enableCustomerInfo">随机</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>客户ID (Customer ID)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.customerId" 
-                  type="text" 
-                  placeholder="客户ID"
-                  class="input-field"
-                  :disabled="!checkoutData.enableCustomerInfo"
-                />
-                <button @click="generateRandomCustomerId" class="btn-small" :disabled="!checkoutData.enableCustomerInfo">随机</button>
-              </div>
+            <div class="section-header-actions">
+              <button 
+                @click="generateAllCustomerInfo" 
+                class="btn-small btn-random-section"
+                :disabled="!checkoutData.enableCustomerInfo"
+              >
+                随机生成
+              </button>
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="checkoutData.enableCustomerInfo" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">{{ checkoutData.enableCustomerInfo ? '启用' : '禁用' }}</span>
+              </label>
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !checkoutData.enableCustomerInfo }">
+          <div class="form-row-2" :class="{ 'disabled-section': !checkoutData.enableCustomerInfo }">
             <div class="form-group">
               <label>国家代码 (Country)</label>
-              <div class="input-with-button">
-                <select v-model="checkoutData.country" class="input-field" :disabled="!checkoutData.enableCustomerInfo">
-                  <option value="">请选择</option>
-                  <option value="CN">CN - 中国</option>
-                  <option value="US">US - 美国</option>
-                  <option value="GB">GB - 英国</option>
-                  <option value="JP">JP - 日本</option>
-                  <option value="SG">SG - 新加坡</option>
-                  <option value="HK">HK - 香港</option>
-                </select>
-                <button @click="generateRandomCountry" class="btn-small" :disabled="!checkoutData.enableCustomerInfo">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.country" 
+                type="text" 
+                list="country-list"
+                placeholder="选择或输入国家代码"
+                class="input-field"
+                :disabled="!checkoutData.enableCustomerInfo"
+              />
+              <datalist id="country-list">
+                <option value="CN">CN - 中国</option>
+                <option value="US">US - 美国</option>
+                <option value="GB">GB - 英国</option>
+                <option value="JP">JP - 日本</option>
+                <option value="SG">SG - 新加坡</option>
+                <option value="HK">HK - 香港</option>
+                <option value="FR">FR - 法国</option>
+                <option value="DE">DE - 德国</option>
+                <option value="IT">IT - 意大利</option>
+                <option value="ES">ES - 西班牙</option>
+              </datalist>
             </div>
             <div class="form-group">
               <label>语言 (Language)</label>
-              <div class="input-with-button">
-                <select v-model="checkoutData.language" class="input-field" :disabled="!checkoutData.enableCustomerInfo">
-                  <option value="">请选择</option>
-                  <option value="zh-CN">zh-CN - 简体中文</option>
-                  <option value="zh-TW">zh-TW - 繁体中文</option>
-                  <option value="en-US">en-US - 英语</option>
-                  <option value="ja-JP">ja-JP - 日语</option>
-                </select>
-                <button @click="generateRandomLanguage" class="btn-small" :disabled="!checkoutData.enableCustomerInfo">随机</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>订单IP (Order IP) <span class="required">*</span></label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.orderIp" 
-                  type="text" 
-                  placeholder="192.168.1.1"
-                  class="input-field"
-                  :disabled="!checkoutData.enableCustomerInfo"
-                />
-                <button @click="generateRandomOrderIp" class="btn-small" :disabled="!checkoutData.enableCustomerInfo">随机</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>客户地址 (Address)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.customerAddress" 
-                  type="text" 
-                  placeholder="客户地址"
-                  class="input-field"
-                  :disabled="!checkoutData.enableCustomerInfo"
-                />
-                <button @click="generateRandomAddress" class="btn-small" :disabled="!checkoutData.enableCustomerInfo">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.language" 
+                type="text" 
+                list="language-list"
+                placeholder="选择或输入语言"
+                class="input-field"
+                :disabled="!checkoutData.enableCustomerInfo"
+              />
+              <datalist id="language-list">
+                <option value="zh-CN">zh-CN - 简体中文</option>
+                <option value="zh-TW">zh-TW - 繁体中文</option>
+                <option value="en-US">en-US - 英语</option>
+                <option value="ja-JP">ja-JP - 日语</option>
+                <option value="en-GB">en-GB - 英语(英国)</option>
+                <option value="fr-FR">fr-FR - 法语</option>
+                <option value="de-DE">de-DE - 德语</option>
+                <option value="es-ES">es-ES - 西班牙语</option>
+              </datalist>
             </div>
           </div>
 
@@ -371,171 +293,161 @@
 
           <div class="section-header">
             <h3>账单信息 (Billing Info)</h3>
-            <label class="toggle-switch">
-              <input type="checkbox" v-model="checkoutData.enableBillInfo" />
-              <span class="toggle-slider"></span>
-              <span class="toggle-label">{{ checkoutData.enableBillInfo ? '启用' : '禁用' }}</span>
-            </label>
+            <div class="section-header-actions">
+              <button 
+                @click="generateAllBillInfo" 
+                class="btn-small btn-random-section"
+                :disabled="!checkoutData.enableBillInfo"
+              >
+                随机生成
+              </button>
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="checkoutData.enableBillInfo" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">{{ checkoutData.enableBillInfo ? '启用' : '禁用' }}</span>
+              </label>
+            </div>
           </div>
           <div class="form-row-4" :class="{ 'disabled-section': !checkoutData.enableBillInfo }">
             <div class="form-group">
               <label>账单名 (First Name)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.billFirstName" 
-                  type="text" 
-                  placeholder="First Name"
-                  class="input-field"
-                  :disabled="!checkoutData.enableBillInfo"
-                />
-                <button @click="generateRandomBillFirstName" class="btn-small" :disabled="!checkoutData.enableBillInfo">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billFirstName" 
+                type="text" 
+                placeholder="First Name"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
             </div>
             <div class="form-group">
               <label>账单姓 (Last Name)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.billLastName" 
-                  type="text" 
-                  placeholder="Last Name"
-                  class="input-field"
-                  :disabled="!checkoutData.enableBillInfo"
-                />
-                <button @click="generateRandomBillLastName" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billLastName" 
+                type="text" 
+                placeholder="Last Name"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
             </div>
             <div class="form-group">
               <label>账单邮箱 (Email)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.billEmail" 
-                  type="email" 
-                  placeholder="bill@example.com"
-                  class="input-field"
-                  :disabled="!checkoutData.enableBillInfo"
-                />
-                <button @click="generateRandomBillEmail" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billEmail" 
+                type="email" 
+                placeholder="bill@example.com"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
             </div>
             <div class="form-group">
               <label>账单电话 (Phone)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.billPhone" 
-                  type="text" 
-                  placeholder="+1234567890"
-                  class="input-field"
-                  :disabled="!checkoutData.enableBillInfo"
-                />
-                <button @click="generateRandomBillPhone" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billPhone" 
+                type="text" 
+                placeholder="+1234567890"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
             </div>
           </div>
           <div class="form-row-4" :class="{ 'disabled-section': !checkoutData.enableBillInfo }">
             <div class="form-group">
               <label>账单地址 (Address Line1)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.billAddressLine1" 
-                  type="text" 
-                  placeholder="Address Line 1"
-                  class="input-field"
-                  :disabled="!checkoutData.enableBillInfo"
-                />
-                <button @click="generateRandomBillAddress" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billAddressLine1" 
+                type="text" 
+                placeholder="Address Line 1"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
             </div>
             <div class="form-group">
               <label>账单国家 (Country)</label>
-              <div class="input-with-button">
-                <select v-model="checkoutData.billCountry" class="input-field" :disabled="!checkoutData.enableBillInfo">
-                  <option value="">请选择</option>
-                  <option value="CN">CN - 中国</option>
-                  <option value="US">US - 美国</option>
-                  <option value="GB">GB - 英国</option>
-                  <option value="FR">FR - 法国</option>
-                  <option value="JP">JP - 日本</option>
-                </select>
-                <button @click="generateRandomBillCountry" class="btn-small" :disabled="!checkoutData.enableBillInfo">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billCountry" 
+                type="text" 
+                list="bill-country-list"
+                placeholder="选择或输入国家代码"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
+              <datalist id="bill-country-list">
+                <option value="CN">CN - 中国</option>
+                <option value="US">US - 美国</option>
+                <option value="GB">GB - 英国</option>
+                <option value="FR">FR - 法国</option>
+                <option value="JP">JP - 日本</option>
+                <option value="SG">SG - 新加坡</option>
+                <option value="HK">HK - 香港</option>
+                <option value="DE">DE - 德国</option>
+              </datalist>
             </div>
             <div class="form-group">
               <label>账单州/省 (State)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.billState" 
-                  type="text" 
-                  placeholder="State/Province"
-                  class="input-field"
-                  :disabled="!checkoutData.enableBillInfo"
-                />
-                <button @click="generateRandomBillState" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billState" 
+                type="text" 
+                placeholder="State/Province"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
             </div>
             <div class="form-group">
               <label>账单城市 (City)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.billCity" 
-                  type="text" 
-                  placeholder="City"
-                  class="input-field"
-                  :disabled="!checkoutData.enableBillInfo"
-                />
-                <button @click="generateRandomBillCity" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billCity" 
+                type="text" 
+                placeholder="City"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
             </div>
           </div>
           <div class="form-row-4" :class="{ 'disabled-section': !checkoutData.enableBillInfo }">
             <div class="form-group">
               <label>账单邮编 (Postal Code)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.billPostalCode" 
-                  type="text" 
-                  placeholder="Postal Code"
-                  class="input-field"
-                  :disabled="!checkoutData.enableBillInfo"
-                />
-                <button @click="generateRandomBillPostalCode" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billPostalCode" 
+                type="text" 
+                placeholder="Postal Code"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
             </div>
             <div class="form-group">
               <label>区号 (Area Code)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.billAreaCode" 
-                  type="text" 
-                  placeholder="Area Code"
-                  class="input-field"
-                  :disabled="!checkoutData.enableBillInfo"
-                />
-                <button @click="generateRandomBillAreaCode" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billAreaCode" 
+                type="text" 
+                placeholder="Area Code"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
             </div>
             <div class="form-group">
               <label>描述符 (Descriptor)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.billDescriptor" 
-                  type="text" 
-                  placeholder="Descriptor"
-                  class="input-field"
-                  :disabled="!checkoutData.enableBillInfo"
-                />
-                <button @click="generateRandomBillDescriptor" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billDescriptor" 
+                type="text" 
+                placeholder="Descriptor"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
             </div>
             <div class="form-group">
               <label>地址收集 (Address Collection)</label>
-              <div class="input-with-button">
-                <select v-model="checkoutData.billAddressCollection" class="input-field" :disabled="!checkoutData.enableBillInfo">
-                  <option value="">请选择</option>
-                  <option value="REQUIRED">REQUIRED - 必填</option>
-                  <option value="AUTO">AUTO - 自动</option>
-                </select>
-                <button @click="generateRandomBillAddressCollection" class="btn-small" :disabled="!checkoutData.enableBillInfo">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.billAddressCollection" 
+                type="text" 
+                list="bill-address-collection-list"
+                placeholder="选择或输入地址收集方式"
+                class="input-field"
+                :disabled="!checkoutData.enableBillInfo"
+              />
+              <datalist id="bill-address-collection-list">
+                <option value="REQUIRED">REQUIRED - 必填</option>
+                <option value="AUTO">AUTO - 自动</option>
+              </datalist>
             </div>
           </div>
 
@@ -543,147 +455,136 @@
 
           <div class="section-header">
             <h3>收货信息 (Shipping Info)</h3>
-            <label class="toggle-switch">
-              <input type="checkbox" v-model="checkoutData.enableShipInfo" />
-              <span class="toggle-slider"></span>
-              <span class="toggle-label">{{ checkoutData.enableShipInfo ? '启用' : '禁用' }}</span>
-            </label>
+            <div class="section-header-actions">
+              <button 
+                @click="generateAllShipInfo" 
+                class="btn-small btn-random-section"
+                :disabled="!checkoutData.enableShipInfo"
+              >
+                随机生成
+              </button>
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="checkoutData.enableShipInfo" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">{{ checkoutData.enableShipInfo ? '启用' : '禁用' }}</span>
+              </label>
+            </div>
           </div>
           <div class="form-row-4" :class="{ 'disabled-section': !checkoutData.enableShipInfo }">
             <div class="form-group">
               <label>收货名 (First Name)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.shipFirstName" 
-                  type="text" 
-                  placeholder="First Name"
-                  class="input-field"
-                  :disabled="!checkoutData.enableShipInfo"
-                />
-                <button @click="generateRandomShipFirstName" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.shipFirstName" 
+                type="text" 
+                placeholder="First Name"
+                class="input-field"
+                :disabled="!checkoutData.enableShipInfo"
+              />
             </div>
             <div class="form-group">
               <label>收货姓 (Last Name)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.shipLastName" 
-                  type="text" 
-                  placeholder="Last Name"
-                  class="input-field"
-                  :disabled="!checkoutData.enableShipInfo"
-                />
-                <button @click="generateRandomShipLastName" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.shipLastName" 
+                type="text" 
+                placeholder="Last Name"
+                class="input-field"
+                :disabled="!checkoutData.enableShipInfo"
+              />
             </div>
             <div class="form-group">
               <label>收货邮箱 (Email)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.shipEmail" 
-                  type="email" 
-                  placeholder="ship@example.com"
-                  class="input-field"
-                  :disabled="!checkoutData.enableShipInfo"
-                />
-                <button @click="generateRandomShipEmail" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.shipEmail" 
+                type="email" 
+                placeholder="ship@example.com"
+                class="input-field"
+                :disabled="!checkoutData.enableShipInfo"
+              />
             </div>
             <div class="form-group">
               <label>收货电话 (Phone)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.shipPhone" 
-                  type="text" 
-                  placeholder="+1234567890"
-                  class="input-field"
-                  :disabled="!checkoutData.enableShipInfo"
-                />
-                <button @click="generateRandomShipPhone" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.shipPhone" 
+                type="text" 
+                placeholder="+1234567890"
+                class="input-field"
+                :disabled="!checkoutData.enableShipInfo"
+              />
             </div>
           </div>
           <div class="form-row-4" :class="{ 'disabled-section': !checkoutData.enableShipInfo }">
             <div class="form-group">
               <label>收货地址 (Address Line1)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.shipAddressLine1" 
-                  type="text" 
-                  placeholder="Address Line 1"
-                  class="input-field"
-                  :disabled="!checkoutData.enableShipInfo"
-                />
-                <button @click="generateRandomShipAddress" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.shipAddressLine1" 
+                type="text" 
+                placeholder="Address Line 1"
+                class="input-field"
+                :disabled="!checkoutData.enableShipInfo"
+              />
             </div>
             <div class="form-group">
               <label>收货国家 (Country)</label>
-              <div class="input-with-button">
-                <select v-model="checkoutData.shipCountry" class="input-field" :disabled="!checkoutData.enableShipInfo">
-                  <option value="">请选择</option>
-                  <option value="CN">CN - 中国</option>
-                  <option value="US">US - 美国</option>
-                  <option value="GB">GB - 英国</option>
-                  <option value="FR">FR - 法国</option>
-                  <option value="JP">JP - 日本</option>
-                </select>
-                <button @click="generateRandomShipCountry" class="btn-small" :disabled="!checkoutData.enableShipInfo">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.shipCountry" 
+                type="text" 
+                list="ship-country-list"
+                placeholder="选择或输入国家代码"
+                class="input-field"
+                :disabled="!checkoutData.enableShipInfo"
+              />
+              <datalist id="ship-country-list">
+                <option value="CN">CN - 中国</option>
+                <option value="US">US - 美国</option>
+                <option value="GB">GB - 英国</option>
+                <option value="FR">FR - 法国</option>
+                <option value="JP">JP - 日本</option>
+                <option value="SG">SG - 新加坡</option>
+                <option value="HK">HK - 香港</option>
+                <option value="DE">DE - 德国</option>
+              </datalist>
             </div>
             <div class="form-group">
               <label>收货州/省 (State)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.shipState" 
-                  type="text" 
-                  placeholder="State/Province"
-                  class="input-field"
-                  :disabled="!checkoutData.enableShipInfo"
-                />
-                <button @click="generateRandomShipState" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.shipState" 
+                type="text" 
+                placeholder="State/Province"
+                class="input-field"
+                :disabled="!checkoutData.enableShipInfo"
+              />
             </div>
             <div class="form-group">
               <label>收货城市 (City)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.shipCity" 
-                  type="text" 
-                  placeholder="City"
-                  class="input-field"
-                  :disabled="!checkoutData.enableShipInfo"
-                />
-                <button @click="generateRandomShipCity" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.shipCity" 
+                type="text" 
+                placeholder="City"
+                class="input-field"
+                :disabled="!checkoutData.enableShipInfo"
+              />
             </div>
           </div>
           <div class="form-row-4" :class="{ 'disabled-section': !checkoutData.enableShipInfo }">
             <div class="form-group">
               <label>收货邮编 (Postal Code)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.shipPostalCode" 
-                  type="text" 
-                  placeholder="Postal Code"
-                  class="input-field"
-                  :disabled="!checkoutData.enableShipInfo"
-                />
-                <button @click="generateRandomShipPostalCode" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.shipPostalCode" 
+                type="text" 
+                placeholder="Postal Code"
+                class="input-field"
+                :disabled="!checkoutData.enableShipInfo"
+              />
             </div>
             <div class="form-group">
               <label>区号 (Area Code)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.shipAreaCode" 
-                  type="text" 
-                  placeholder="Area Code"
-                  class="input-field"
-                  :disabled="!checkoutData.enableShipInfo"
-                />
-                <button @click="generateRandomShipAreaCode" class="btn-small">随机</button>
-              </div>
+              <input 
+                v-model="checkoutData.shipAreaCode" 
+                type="text" 
+                placeholder="Area Code"
+                class="input-field"
+                :disabled="!checkoutData.enableShipInfo"
+              />
             </div>
           </div>
 
@@ -692,30 +593,6 @@
           <h3>高级参数</h3>
 
           <div class="form-row-3">
-            <div class="form-group">
-              <label>时间戳 (Timestamp)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model.number="checkoutData.timestamp" 
-                  type="number" 
-                  placeholder="自动生成"
-                  class="input-field"
-                />
-                <button @click="generateTimestamp" class="btn-small">生成</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>随机数 (Nonce)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.nonce" 
-                  type="text" 
-                  placeholder="自动生成"
-                  class="input-field"
-                />
-                <button @click="generateNonce" class="btn-small">生成</button>
-              </div>
-            </div>
             <div class="form-group">
               <label>超时时间 (Timeout 秒)</label>
               <div class="input-with-button">
@@ -728,9 +605,6 @@
                 <button @click="generateRandomTimeout" class="btn-small">随机</button>
               </div>
             </div>
-          </div>
-
-          <div class="form-row-3">
             <div class="form-group">
               <label>商品ID (Product ID)</label>
               <div class="input-with-button">
@@ -755,19 +629,21 @@
                 <button @click="generateRandomCategory" class="btn-small">随机</button>
               </div>
             </div>
-            <div class="form-group">
-              <label>备注 (Remark)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.remark" 
-                  type="text" 
-                  placeholder="备注信息"
-                  class="input-field"
-                />
-                <button @click="generateRandomRemark" class="btn-small">随机</button>
-              </div>
+          </div>
+
+          <div class="form-group">
+            <label>备注 (Remark)</label>
+            <div class="input-with-button">
+              <input 
+                v-model="checkoutData.remark" 
+                type="text" 
+                placeholder="备注信息"
+                class="input-field"
+              />
+              <button @click="generateRandomRemark" class="btn-small">随机</button>
             </div>
           </div>
+          
 
           <div class="button-group">
             <button @click="generateAllRandom" class="btn-random">一键随机生成所有参数</button>
@@ -805,13 +681,7 @@
               </div>
 
               <div class="result-item">
-                <label>请求参数 (签名前):</label>
-                <pre class="code-block">{{ formatJson(result.requestDataBeforeSign) }}</pre>
-              </div>
-
-
-              <div class="result-item">
-                <label>最终请求参数 (含签名):</label>
+                <label>请求参数 (含签名):</label>
                 <pre class="code-block">{{ formatJson(result.requestData) }}</pre>
               </div>
 
@@ -848,31 +718,87 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { payKKaCheckoutApi } from '../services/paykkaCheckoutApi'
-import { generateRandomIP } from '../services/utils'
+import { 
+  generateRandomIP,
+  generateRandomFirstName,
+  generateRandomLastName,
+  generateRandomChineseName,
+  generateRandomEmail as generateRandomEmailUtil,
+  generateRandomPhone as generateRandomPhoneUtil,
+  generateRandomAddress as generateRandomAddressUtil,
+  generateRandomCountry as generateRandomCountryUtil,
+  generateRandomState as generateRandomStateUtil,
+  generateRandomCity as generateRandomCityUtil,
+  generateRandomPostalCode as generateRandomPostalCodeUtil,
+  generateRandomAreaCode as generateRandomAreaCodeUtil
+} from '../services/utils'
+// 签名相关功能已由 payKKaCheckoutApi 内部管理，无需在此处导入
+import { getAllConfigs, getConfigByMerchantId } from '../services/configManager'
+
+defineEmits(['back'])
 
 const loading = ref(false)
 
+// 商户配置相关
+const merchantConfigs = ref([])
+const selectedMerchantId = ref('')
+
+// 私钥展开/收起状态
+const showPrivateKeyFull = ref(false)
+
+// 加载商户配置列表
+const loadMerchantConfigs = () => {
+  merchantConfigs.value = getAllConfigs()
+  // 不再自动选择，让用户手动选择商户配置
+}
+
+// 清空API配置
+const clearApiConfig = () => {
+  apiConfig.baseUrl = ''
+  apiConfig.merchantId = ''
+  apiConfig.appId = ''
+  apiConfig.privateKey = ''
+}
+
+// 填充API配置
+const fillApiConfig = (config) => {
+  apiConfig.baseUrl = config.baseUrl || 'https://openapi-dev.paykka.com'
+  apiConfig.merchantId = config.merchantId
+  apiConfig.appId = config.appId
+  apiConfig.privateKey = config.privateKey
+}
+
+// 商户选择变化时，自动填充配置
+const onMerchantChange = () => {
+  if (!selectedMerchantId.value) {
+    clearApiConfig()
+    return
+  }
+  
+  const config = getConfigByMerchantId(selectedMerchantId.value)
+  if (config) {
+    fillApiConfig(config)
+  } else {
+    clearApiConfig()
+  }
+}
+
 const apiConfig = reactive({
-  baseUrl: 'https://openapi-dev.paykka.com',
-  merchantId: '18543041582480',
-  privateKey: 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCzvEZPGgaoixnlUcvV+Mxoefm6z4DGOaSwfXlUwa6VytxivhWmTBs7Pkv/axjIc1qthlc8dWK9orOFjixqzYqBmuXLC9mokIDSIuDwdH1I3ORgPrrwwtloxwR2FfG0qOWNT8GtUZN3obzVVCeS8LriDOBeNB3k8kpe4uIjoevSo7L59XjOyocSs4Rt7kABLr04l9MGQXmYEL65Ww8940/A2YFr0PBFzBEBcVTl/sMRfVEM14oxQXTxShaWjNrBBSEQfVDPXjpvqZiO5gbBjiqyi2dRbs+imFRX74zAdOhiO/2V4Y7W5INqcwi75ytJC1O713Yc1h9ZVrxStNorhlsPAgMBAAECggEAHDhpia36cag1jq4DJTuFTLoqHczK2VTfqN5qmIY4lUhexho2Z//3HpwvbpEwOPjzud8n/1QnBsNvEH88NiDDqInbnr/jkvXtZBEZ5GdF7JTSPtJao8bUQAFPkALuCoGiWUe2jzIJx3Tbo1stQ4MMtMV0zRW9w97PEorpGtMnpdDN1asM9ZuCShDZVKx5NeASD8YNXUv8zXB6+rCNQiJkauj+EzLTKi1rmUiv6r0K3mfrn7tyc6oh1DDhI1R8ijyltOQN781fXrza6hzrgsgKYlL1bekKvcKsbacOeMBa8ezEXof3esrDeYXsNt4vghsxsfqQ8bcRfWA6zKGRE7fQkQKBgQD9K89eM0NBZpq4stADrmv7fE7wD0JQstyxr+JzrsJYrK3KftV/SVK09jy9rRnWZM3iOR58SLz/xR/9iJcUSfTV/RDfDrR+dZQPQtfUf5EN9wGNYopUkui1VxQz34/lKFsrJO7akTH/DqGZWxlg1o3ijGLczS9CW6lDx/26kX4qQwKBgQC1vmdR3wl9KXTPxeuV+g/U/s6a7s2MrCZbeYkg11W+X4SBoZPwCnD0x8cLqwNV+WQZmhPbOlps9F6CPFfMxChTy3saIk20T8KZl+Op1NU6VDWeZvHMpJLbWbxYb3pKkhrIG/RlSfhrRiOXKgLsBqYl+Sn9dw8fwPsjIylsMhE9RQKBgQDIa+hMILT7j2ipExXN9EUT4AL11H6hOBeyqxTQk+bTIFCs39/QVpGdJNpNJj4wFblPf/x8U3Eb4khDA+DmdO3YgfDbRN7qxdYihr4qQZrpvUODVCFCdtK2zGr37eISffI+o4xbh1pXGpQfvZjHqtLEKHMTbXQeSkYjnK1nB0sj1QKBgBORPG6EJPFk1T7JgGPVWH8GMBhePaM3pamTnD/87y5f+lQ6oULm3OJ93+BRuTo4b56SCDFCRxoT9VjwRkO1muHqtoZJyzPuonUG9WwDjjGJf3xeeQofbfBP6QdceT4uHNQOrnF5VVW3Z32O+GGRFbJg8TRo7SfuDxvpXTxY56JBAoGAHf5a+WNcd/PFJ5YS9MCQa1lt6s/ioOKNxRNOvmJ+JLh5WmGy2ke0FUHdLGWZG/u83zaavrFtayrycnudOGG7ZVzihdEPHmbkG9CzwB94jj7rqf43OhwwUhL8Z0QGmOUGtlFJJZHYTs+mJZQc2je8jI8A0sw//q/wMumAQ2fqhlc=',
-  appId: '208383410695312',
-  timestamp: null, // 生成签名时自动生成
-  nonce: '', // 生成签名时自动生成
-  signAlg: 'SHA256_WITH_RSA',
-  sign: ''
+  baseUrl: '', // 从商户配置中选择后自动填充
+  merchantId: '', // 从商户配置中选择后自动填充
+  privateKey: '', // 从商户配置中选择后自动填充
+  appId: '' // 从商户配置中选择后自动填充
+  // timestamp, nonce, signAlg, sign 由签名方法自动管理，无需在配置中存储
 })
 
 const checkoutData = reactive({
-  orderNo: '',
   transId: '',
   amount: 0,
   currency: 'USD',
   paymentType: 'PURCHASE',
   sessionMode: 'HOSTED',
-  paymentMethods: '',
   description: '',
   callbackUrl: '',
   returnUrl: '',
@@ -881,18 +807,10 @@ const checkoutData = reactive({
   enableCustomerInfo: true,
   enableBillInfo: false,
   enableShipInfo: false,
-  customerEmail: '',
-  customerPhone: '',
-  customerName: '',
-  customerId: '',
   customer: '',
   goods: '',
   country: '',
   language: '',
-  orderIp: '',
-  customerAddress: '',
-  timestamp: Date.now(),
-  nonce: '',
   timeout: 1800,
   productId: '',
   productCategory: '',
@@ -925,13 +843,6 @@ const checkoutData = reactive({
 
 const result = ref(null)
 
-// 随机生成订单号
-const generateOrderNo = () => {
-  const timestamp = Date.now()
-  const random = Math.floor(Math.random() * 100000)
-  checkoutData.orderNo = `PK${timestamp}${random}`
-}
-
 // 随机生成交易ID
 const generateTransId = () => {
   const timestamp = Date.now()
@@ -942,25 +853,23 @@ const generateTransId = () => {
 // 支付类型使用下拉框选择，不需要随机生成函数
 // generateRandomIP 已从 '../services/utils' 导入，无需重复定义
 
-// 随机生成客户信息
+// 随机生成客户信息（使用公共方法）
 const generateCustomer = () => {
-  const names = ['John Doe', 'Jane Smith', 'Bob Johnson', 'Alice Brown', 'Charlie Wilson']
-  const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'example.com']
-  const name = names[Math.floor(Math.random() * names.length)]
-  const email = `${name.toLowerCase().replace(' ', '.')}@${domains[Math.floor(Math.random() * domains.length)]}`
-  const phone = `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`
+  const firstName = generateRandomFirstName()
+  const lastName = generateRandomLastName()
+  const fullName = `${firstName} ${lastName}`
+  const email = generateRandomEmailUtil(fullName.toLowerCase().replace(' ', '.'))
+  const phone = generateRandomPhoneUtil('us')
   
-  // 如果没有orderIp，生成一个
-  if (!checkoutData.orderIp) {
-    checkoutData.orderIp = generateRandomIP()
-  }
+  // 生成订单IP（用于customer对象中的order_ip字段）
+  const orderIp = generateRandomIP()
   
   checkoutData.customer = JSON.stringify({
-    name: name,
+    name: fullName,
     email: email,
     phone: phone,
     id: `CUST${Date.now()}`,
-    order_ip: checkoutData.orderIp || generateRandomIP() // 必填字段，使用orderIp字段或随机生成
+    order_ip: orderIp // 必填字段，自动生成
   }, null, 2)
 }
 
@@ -1005,11 +914,7 @@ const generateRandomCurrency = () => {
 
 // 会话模式使用下拉框选择，默认值为 HOSTED，不需要随机生成函数
 
-// 随机生成支付方式
-const generateRandomPaymentMethods = () => {
-  const allMethods = ['card', 'alipay', 'wechat', 'bank_transfer']
-  checkoutData.paymentMethods = allMethods[Math.floor(Math.random() * allMethods.length)]
-}
+// generateRandomPaymentMethods 已移除，支付方式字段已删除
 
 // 随机生成商品描述
 const generateRandomDescription = () => {
@@ -1026,36 +931,12 @@ const generateRandomDescription = () => {
   checkoutData.description = descriptions[Math.floor(Math.random() * descriptions.length)]
 }
 
-// 随机生成邮箱
-const generateRandomEmail = () => {
-  const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'example.com', 'qq.com', '163.com']
-  const randomNum = Math.floor(Math.random() * 10000)
-  checkoutData.customerEmail = `customer${randomNum}@${domains[Math.floor(Math.random() * domains.length)]}`
-}
+// 客户信息字段（customerEmail、customerPhone、customerName、customerId）已移除
+// 这些信息现在只存在于 customer JSON 对象中
 
-// 随机生成电话
-const generateRandomPhone = () => {
-  const phonePrefixes = ['138', '139', '150', '151', '186', '188', '159', '177']
-  const phoneSuffix = Math.floor(Math.random() * 100000000).toString().padStart(8, '0')
-  checkoutData.customerPhone = `${phonePrefixes[Math.floor(Math.random() * phonePrefixes.length)]}${phoneSuffix}`
-}
-
-// 随机生成姓名
-const generateRandomName = () => {
-  const surnames = ['张', '李', '王', '刘', '陈', '杨', '赵', '黄', '周', '吴']
-  const names = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '涛', '明', '超', '秀兰']
-  checkoutData.customerName = `${surnames[Math.floor(Math.random() * surnames.length)]}${names[Math.floor(Math.random() * names.length)]}`
-}
-
-// 随机生成客户ID
-const generateRandomCustomerId = () => {
-  checkoutData.customerId = `CUST${Date.now()}${Math.floor(Math.random() * 1000)}`
-}
-
-// 随机生成国家
-const generateRandomCountry = () => {
-  const countries = ['CN', 'US', 'GB', 'JP', 'SG', 'HK']
-  checkoutData.country = countries[Math.floor(Math.random() * countries.length)]
+// 随机生成国家（使用公共方法）
+const generateRandomCountryLocal = () => {
+  checkoutData.country = generateRandomCountryUtil()
 }
 
 // 随机生成语言
@@ -1064,67 +945,22 @@ const generateRandomLanguage = () => {
   checkoutData.language = languages[Math.floor(Math.random() * languages.length)]
 }
 
-// 生成时间戳
-const generateTimestamp = () => {
-  checkoutData.timestamp = Date.now()
+// 批量生成所有客户信息
+const generateAllCustomerInfo = () => {
+  checkoutData.country = generateRandomCountryUtil()
+  const languages = ['zh-CN', 'zh-TW', 'en-US', 'ja-JP']
+  checkoutData.language = languages[Math.floor(Math.random() * languages.length)]
+  // 更新customer JSON对象（包含name、email、phone、id等信息）
+  generateCustomer()
 }
 
-// 生成随机数
-const generateNonce = () => {
-  checkoutData.nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-}
+// timestamp 和 nonce 由签名方法自动管理，无需手动生成函数
 
-// 生成AppId
-const generateAppId = () => {
-  apiConfig.appId = `APP${Date.now()}${Math.floor(Math.random() * 10000)}`
-}
+// generateAppId 已移除，App ID从商户配置中获取
 
 // 生成请求头随机数（内部函数）
-const generateHeaderNonceInternal = () => {
-  const length = Math.floor(Math.random() * 91) + 10 // 10-100字符
-  let nonce = ''
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  for (let i = 0; i < length; i++) {
-    nonce += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return nonce
-}
-
-// 生成请求头签名（自动生成timestamp和nonce）
-const generateHeaderSign = async () => {
-  if (!apiConfig.privateKey) {
-    alert('请先输入RSA私钥')
-    return
-  }
-  
-  // 自动生成timestamp和nonce
-  const timestamp = Date.now()
-  const nonce = generateHeaderNonceInternal()
-  
-  // 更新显示值
-  apiConfig.timestamp = timestamp
-  apiConfig.nonce = nonce
-  
-  console.log('========== 手动生成签名 ==========')
-  console.log('时间戳:', timestamp)
-  console.log('随机数:', nonce)
-  
-  try {
-    const sign = await payKKaCheckoutApi.generateHeaderSign(
-      'POST',
-      '/v3/payment/acq/session',
-      timestamp,
-      nonce,
-      JSON.stringify(checkoutData),
-      apiConfig.privateKey
-    )
-    apiConfig.sign = sign
-    console.log('签名已更新到界面')
-  } catch (error) {
-    console.error('签名生成失败:', error)
-    alert('签名生成失败: ' + error.message)
-  }
-}
+// 生成请求头签名（自动生成timestamp和nonce）- 使用公共方法
+// 签名方法已由 createCheckout 函数内部自动管理，无需手动生成
 
 // 随机生成超时时间
 const generateRandomTimeout = () => {
@@ -1149,160 +985,47 @@ const generateRandomRemark = () => {
   checkoutData.remark = remarks[Math.floor(Math.random() * remarks.length)]
 }
 
-// 随机生成订单IP
-const generateRandomOrderIp = () => {
-  checkoutData.orderIp = generateRandomIP()
-}
+// orderIp 和 customerAddress 已移除，order_ip 在 customer 对象中自动生成
 
-// 随机生成客户地址
-const generateRandomAddress = () => {
-  const addresses = [
-    '北京市朝阳区建国路88号',
-    '上海市浦东新区陆家嘴环路1000号',
-    '广州市天河区天河路123号',
-    '深圳市南山区科技园南路123号',
-    '杭州市西湖区文三路456号'
-  ]
-  checkoutData.customerAddress = addresses[Math.floor(Math.random() * addresses.length)]
-}
-
-// 账单信息随机生成函数
-const generateRandomBillFirstName = () => {
-  const names = ['John', 'Jane', 'Bob', 'Alice', 'Charlie', 'David', 'Emma', 'Frank']
-  checkoutData.billFirstName = names[Math.floor(Math.random() * names.length)]
-}
-
-const generateRandomBillLastName = () => {
-  const names = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis']
-  checkoutData.billLastName = names[Math.floor(Math.random() * names.length)]
-}
-
-const generateRandomBillEmail = () => {
-  const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'example.com']
-  const randomNum = Math.floor(Math.random() * 10000)
-  checkoutData.billEmail = `bill${randomNum}@${domains[Math.floor(Math.random() * domains.length)]}`
-}
-
-const generateRandomBillPhone = () => {
-  checkoutData.billPhone = `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`
-}
-
-const generateRandomBillAddress = () => {
-  const addresses = [
-    '123 Main Street',
-    '456 Oak Avenue',
-    '789 Pine Road',
-    '321 Elm Street',
-    '654 Maple Drive'
-  ]
-  checkoutData.billAddressLine1 = addresses[Math.floor(Math.random() * addresses.length)]
-}
-
-const generateRandomBillCountry = () => {
-  const countries = ['CN', 'US', 'GB', 'FR', 'JP']
-  checkoutData.billCountry = countries[Math.floor(Math.random() * countries.length)]
-}
-
-const generateRandomBillState = () => {
-  const states = ['California', 'New York', 'Texas', 'Florida', 'Illinois', 'Beijing', 'Shanghai', 'Guangdong']
-  checkoutData.billState = states[Math.floor(Math.random() * states.length)]
-}
-
-const generateRandomBillCity = () => {
-  const cities = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Beijing', 'Shanghai', 'Guangzhou', 'Shenzhen']
-  checkoutData.billCity = cities[Math.floor(Math.random() * cities.length)]
-}
-
-const generateRandomBillPostalCode = () => {
-  checkoutData.billPostalCode = Math.floor(Math.random() * 90000) + 10000 + ''
-}
-
-const generateRandomBillAreaCode = () => {
-  const areaCodes = ['010', '021', '020', '0755', '0571', '1', '44', '33']
-  checkoutData.billAreaCode = areaCodes[Math.floor(Math.random() * areaCodes.length)]
-}
-
-const generateRandomBillDescriptor = () => {
+// 批量生成所有账单信息
+const generateAllBillInfo = () => {
+  checkoutData.billFirstName = generateRandomFirstName()
+  checkoutData.billLastName = generateRandomLastName()
+  checkoutData.billEmail = generateRandomEmailUtil('bill')
+  checkoutData.billPhone = generateRandomPhoneUtil('us')
+  checkoutData.billAddressLine1 = generateRandomAddressUtil('en')
+  checkoutData.billCountry = generateRandomCountryUtil()
+  checkoutData.billState = generateRandomStateUtil(checkoutData.billCountry || 'US')
+  checkoutData.billCity = generateRandomCityUtil(checkoutData.billCountry || 'US')
+  checkoutData.billPostalCode = generateRandomPostalCodeUtil()
+  checkoutData.billAreaCode = generateRandomAreaCodeUtil(checkoutData.billCountry || 'CN')
   checkoutData.billDescriptor = `DESC${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-}
-
-const generateRandomBillAddressCollection = () => {
   const options = ['REQUIRED', 'AUTO']
   checkoutData.billAddressCollection = options[Math.floor(Math.random() * options.length)]
 }
 
-// 收货信息随机生成函数
-const generateRandomShipFirstName = () => {
-  const names = ['Zhang', 'Li', 'Wang', 'Liu', 'Chen', 'Yang', 'Zhao', 'Huang']
-  checkoutData.shipFirstName = names[Math.floor(Math.random() * names.length)]
-}
-
-const generateRandomShipLastName = () => {
-  const names = ['Wei', 'Fang', 'Na', 'Min', 'Jing', 'Li', 'Qiang', 'Lei']
-  checkoutData.shipLastName = names[Math.floor(Math.random() * names.length)]
-}
-
-const generateRandomShipEmail = () => {
-  const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'example.com']
-  const randomNum = Math.floor(Math.random() * 10000)
-  checkoutData.shipEmail = `ship${randomNum}@${domains[Math.floor(Math.random() * domains.length)]}`
-}
-
-const generateRandomShipPhone = () => {
-  checkoutData.shipPhone = `+33${Math.floor(Math.random() * 900000000) + 100000000}`
-}
-
-const generateRandomShipAddress = () => {
-  const addresses = [
-    '16 Rue Crespin du Gast',
-    '123 Avenue des Champs',
-    '456 Boulevard Saint-Germain',
-    '789 Rue de la Paix',
-    '321 Place de la République'
-  ]
-  checkoutData.shipAddressLine1 = addresses[Math.floor(Math.random() * addresses.length)]
-}
-
-const generateRandomShipCountry = () => {
-  const countries = ['CN', 'US', 'GB', 'FR', 'JP']
-  checkoutData.shipCountry = countries[Math.floor(Math.random() * countries.length)]
-}
-
-const generateRandomShipState = () => {
-  const states = ['Île-de-France', 'California', 'New York', 'Guangdong', 'Tokyo']
-  checkoutData.shipState = states[Math.floor(Math.random() * states.length)]
-}
-
-const generateRandomShipCity = () => {
-  const cities = ['Paris', 'London', 'New York', 'Beijing', 'Tokyo']
-  checkoutData.shipCity = cities[Math.floor(Math.random() * cities.length)]
-}
-
-const generateRandomShipPostalCode = () => {
-  checkoutData.shipPostalCode = Math.floor(Math.random() * 90000) + 10000 + ''
-}
-
-const generateRandomShipAreaCode = () => {
-  const areaCodes = ['33', '1', '44', '86', '81']
-  checkoutData.shipAreaCode = areaCodes[Math.floor(Math.random() * areaCodes.length)]
+// 批量生成所有收货信息
+const generateAllShipInfo = () => {
+  checkoutData.shipFirstName = generateRandomFirstName()
+  checkoutData.shipLastName = generateRandomLastName()
+  checkoutData.shipEmail = generateRandomEmailUtil('ship')
+  checkoutData.shipPhone = generateRandomPhoneUtil('fr')
+  checkoutData.shipAddressLine1 = generateRandomAddressUtil('en')
+  checkoutData.shipCountry = generateRandomCountryUtil()
+  checkoutData.shipState = generateRandomStateUtil(checkoutData.shipCountry || 'FR')
+  checkoutData.shipCity = generateRandomCityUtil(checkoutData.shipCountry || 'FR')
+  checkoutData.shipPostalCode = generateRandomPostalCodeUtil()
+  checkoutData.shipAreaCode = generateRandomAreaCodeUtil(checkoutData.shipCountry || 'FR')
 }
 
 // 一键随机生成所有参数
 const generateAllRandom = () => {
-  generateOrderNo()
   generateRandomAmount()
   generateRandomCurrency()
   // sessionMode 使用下拉框，默认值为 HOSTED，不需要随机生成
-  generateRandomPaymentMethods()
   generateRandomDescription()
-  generateRandomEmail()
-  generateRandomPhone()
-  generateRandomName()
-  generateRandomCustomerId()
-  generateRandomCountry()
-  generateRandomLanguage()
-  generateTimestamp()
-  generateNonce()
+  // 使用批量生成函数生成客户信息
+  generateAllCustomerInfo()
   generateRandomTimeout()
   generateRandomProductId()
   generateRandomCategory()
@@ -1311,45 +1034,19 @@ const generateAllRandom = () => {
   // 生成必填字段
   generateTransId()
   // paymentType 使用下拉框，默认值为 PURCHASE，不需要随机生成
-  generateCustomer()
+  // generateCustomer() 已在 generateAllCustomerInfo() 中调用
   generateGoods()
   
-  // 清空旧的签名和请求头参数，确保下次创建时重新生成
-  apiConfig.timestamp = null
-  apiConfig.nonce = ''
-  apiConfig.sign = ''
+  // 签名相关参数由签名方法自动管理，无需手动清空
   
-  // 账单信息
-  generateRandomBillFirstName()
-  generateRandomBillLastName()
-  generateRandomBillEmail()
-  generateRandomBillPhone()
-  generateRandomBillAddress()
-  generateRandomBillCountry()
-  generateRandomBillState()
-  generateRandomBillCity()
-  generateRandomBillPostalCode()
-  generateRandomBillAreaCode()
-  generateRandomBillDescriptor()
-  generateRandomBillAddressCollection()
+  // 使用批量生成函数生成账单信息
+  generateAllBillInfo()
   
-  // 收货信息
-  generateRandomShipFirstName()
-  generateRandomShipLastName()
-  generateRandomShipEmail()
-  generateRandomShipPhone()
-  generateRandomShipAddress()
-  generateRandomShipCountry()
-  generateRandomShipState()
-  generateRandomShipCity()
-  generateRandomShipPostalCode()
-  generateRandomShipAreaCode()
+  // 使用批量生成函数生成收货信息
+  generateAllShipInfo()
   
-  generateRandomOrderIp()
-  generateRandomAddress()
-  
-  // 请求头参数需要手动填写（timestamp和nonce在生成签名时自动生成）
-  console.log('所有参数已随机生成，请填写请求头参数后生成签名')
+  // timestamp 和 nonce 由签名方法自动管理，无需手动生成
+  console.log('所有参数已随机生成，签名将在创建收银台时自动生成')
   
   checkoutData.callbackUrl = 'https://example.com/callback'
   checkoutData.returnUrl = 'https://example.com/success'
@@ -1364,13 +1061,11 @@ const formatJson = (obj) => {
 
 // 重置表单
 const resetForm = () => {
-  checkoutData.orderNo = ''
   checkoutData.transId = ''
   checkoutData.amount = 0
   checkoutData.currency = 'USD'
   checkoutData.paymentType = 'PURCHASE'
   checkoutData.sessionMode = 'HOSTED'
-  checkoutData.paymentMethods = ''
   checkoutData.description = ''
   checkoutData.callbackUrl = ''
   checkoutData.returnUrl = ''
@@ -1381,16 +1076,8 @@ const resetForm = () => {
   checkoutData.enableShipInfo = false
   checkoutData.customer = ''
   checkoutData.goods = ''
-  checkoutData.customerEmail = ''
-  checkoutData.customerPhone = ''
-  checkoutData.customerName = ''
-  checkoutData.customerId = ''
   checkoutData.country = ''
   checkoutData.language = ''
-  checkoutData.orderIp = ''
-  checkoutData.customerAddress = ''
-  checkoutData.timestamp = Date.now()
-  checkoutData.nonce = ''
   checkoutData.timeout = 1800
   checkoutData.productId = ''
   checkoutData.productCategory = ''
@@ -1422,52 +1109,54 @@ const resetForm = () => {
   checkoutData.shipPostalCode = ''
   checkoutData.shipAreaCode = ''
   
-  // 重置请求头参数
-  apiConfig.appId = '208383410695312'
-  apiConfig.timestamp = null
-  apiConfig.nonce = ''
-  apiConfig.sign = ''
-  // 保留私钥和signAlg，不清空
+  // 重置请求头参数（不清空，因为从商户配置中获取）
+  // apiConfig 中的 baseUrl, merchantId, appId, privateKey 从商户配置中获取，不清空
   
   result.value = null
 }
 
-// 创建收银台
-const createCheckout = async () => {
-  // 验证必填字段
-  if (!apiConfig.merchantId || !apiConfig.privateKey) {
-    alert('请填写商户ID和私钥')
-    return
+// 验证商户配置
+const validateMerchantConfig = () => {
+  if (!selectedMerchantId.value) {
+    alert('请先选择商户配置')
+    return false
   }
-
-  if (!checkoutData.orderNo) {
-    generateOrderNo()
+  
+  if (!apiConfig.baseUrl || !apiConfig.merchantId || !apiConfig.privateKey || !apiConfig.appId) {
+    alert('商户配置不完整，请检查商户配置或重新选择')
+    return false
   }
+  return true
+}
 
+// 验证收银台数据
+const validateCheckoutData = () => {
   if (!checkoutData.amount || checkoutData.amount <= 0) {
     alert('请输入有效的交易金额')
-    return
+    return false
   }
 
-  if (!checkoutData.paymentMethods || checkoutData.paymentMethods === '') {
-    alert('请至少选择一种支付方式')
-    return
-  }
+  return true
+}
 
-  // 验证JSON格式和必填字段
+// 验证JSON数据
+const validateJsonData = () => {
   let customerObj = null
   let goodsObj = null
   
-  try {
-    customerObj = JSON.parse(checkoutData.customer)
-    // 验证 customer.order_ip 不能为空
-    if (!customerObj.order_ip || customerObj.order_ip.trim() === '') {
-      alert('客户信息 (Customer) 中的 order_ip 字段不能为空')
-      return
+  // 只有当客户信息开关启用时，才验证和解析 customer JSON
+  if (checkoutData.enableCustomerInfo) {
+    try {
+      customerObj = JSON.parse(checkoutData.customer)
+      // 验证 customer.order_ip 不能为空
+      if (!customerObj.order_ip || customerObj.order_ip.trim() === '') {
+        alert('客户信息 (Customer) 中的 order_ip 字段不能为空')
+        return null
+      }
+    } catch (e) {
+      alert('客户信息 (Customer) 格式错误，请输入有效的JSON')
+      return null
     }
-  } catch (e) {
-    alert('客户信息 (Customer) 格式错误，请输入有效的JSON')
-    return
   }
 
   try {
@@ -1475,100 +1164,111 @@ const createCheckout = async () => {
     // 验证 goods[0].link 不能为null
     if (!Array.isArray(goodsObj) || goodsObj.length === 0) {
       alert('商品信息 (Goods) 必须是一个非空数组')
-      return
+      return null
     }
     for (let i = 0; i < goodsObj.length; i++) {
       if (goodsObj[i].link === null || goodsObj[i].link === undefined) {
         alert(`商品信息 (Goods) 中第 ${i + 1} 个商品的 link 字段不能为null`)
-        return
+        return null
       }
     }
   } catch (e) {
     alert('商品信息 (Goods) 格式错误，请输入有效的JSON')
-    return
+    return null
   }
+  
+  return { customerObj, goodsObj }
+}
+
+// 创建收银台
+const createCheckout = async () => {
+  // 验证必填字段
+  if (!validateMerchantConfig()) return
+
+  if (!validateCheckoutData()) return
+
+  // 验证JSON格式和必填字段
+  const jsonData = validateJsonData()
+  if (!jsonData) return
+  
+  const { customerObj, goodsObj } = jsonData
 
   loading.value = true
 
   try {
-    // 如果没有时间戳和随机数，自动生成
-    if (!checkoutData.timestamp) {
-      checkoutData.timestamp = Date.now()
-    }
-    if (!checkoutData.nonce) {
-      checkoutData.nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-    }
-
     // 构建请求数据（使用下划线命名，与API服务保持一致）
+    // timestamp 和 nonce 由签名方法自动管理，不应在请求体中
     const requestData = {
       merchant_id: apiConfig.merchantId,
-      order_no: checkoutData.orderNo,
       trans_id: checkoutData.transId,
       amount: checkoutData.amount,
       currency: checkoutData.currency,
       payment_type: checkoutData.paymentType,
       session_mode: checkoutData.sessionMode,
-      payment_methods: checkoutData.paymentMethods,
-      description: checkoutData.description || `订单 ${checkoutData.orderNo}`,
+      description: checkoutData.description || `订单 ${checkoutData.transId}`,
       callback_url: checkoutData.callbackUrl || '',
       return_url: checkoutData.returnUrl || '',
       cancel_url: checkoutData.cancelUrl || '',
-      customer: customerObj,
       goods: goodsObj,
-      timestamp: checkoutData.timestamp,
-      nonce: checkoutData.nonce,
       timeout: checkoutData.timeout || 1800,
       product_id: checkoutData.productId || '',
       product_category: checkoutData.productCategory || '',
       remark: checkoutData.remark || ''
     }
 
-    // 只有当客户信息开关启用时，才添加客户信息字段
+    // 只有当客户信息开关启用时，才添加客户信息字段和 customer 对象
     if (checkoutData.enableCustomerInfo) {
-      if (checkoutData.customerEmail) requestData.customer_email = checkoutData.customerEmail
-      if (checkoutData.customerPhone) requestData.customer_phone = checkoutData.customerPhone
-      if (checkoutData.customerName) requestData.customer_name = checkoutData.customerName
-      if (checkoutData.customerId) requestData.customer_id = checkoutData.customerId
+      // 添加 customer JSON 对象（包含所有客户信息：name、email、phone、id等）
+      if (customerObj) {
+        requestData.customer = customerObj
+      }
+      // 添加其他客户信息字段（country、language）
       if (checkoutData.country) requestData.country = checkoutData.country
       if (checkoutData.language) requestData.language = checkoutData.language
     }
 
+    // 构建地址信息对象的辅助函数
+    const buildAddressObject = (prefix) => {
+      const obj = {}
+      const fieldMap = {
+        FirstName: 'first_name',
+        LastName: 'last_name',
+        Email: 'email',
+        Phone: 'phone_number',
+        AddressLine1: 'address_line1',
+        Country: 'country',
+        State: 'state',
+        City: 'city',
+        PostalCode: 'postal_code',
+        AreaCode: 'area_code'
+      }
+      
+      for (const [key, snakeKey] of Object.entries(fieldMap)) {
+        const value = checkoutData[`${prefix}${key}`]
+        if (value) obj[snakeKey] = value
+      }
+      
+      // 特殊字段处理
+      if (prefix === 'bill') {
+        if (checkoutData.billDescriptor) obj.descriptor = checkoutData.billDescriptor
+        if (checkoutData.billAddressCollection) obj.billing_address_collection = checkoutData.billAddressCollection
+      }
+      
+      return Object.keys(obj).length > 0 ? obj : null
+    }
+
     // 构建账单信息对象（bill）- 只有当开关启用时才构建
     if (checkoutData.enableBillInfo) {
-      const billObj = {}
-      if (checkoutData.billFirstName) billObj.first_name = checkoutData.billFirstName
-      if (checkoutData.billLastName) billObj.last_name = checkoutData.billLastName
-      if (checkoutData.billEmail) billObj.email = checkoutData.billEmail
-      if (checkoutData.billPhone) billObj.phone_number = checkoutData.billPhone
-      if (checkoutData.billAddressLine1) billObj.address_line1 = checkoutData.billAddressLine1
-      if (checkoutData.billCountry) billObj.country = checkoutData.billCountry
-      if (checkoutData.billState) billObj.state = checkoutData.billState
-      if (checkoutData.billCity) billObj.city = checkoutData.billCity
-      if (checkoutData.billPostalCode) billObj.postal_code = checkoutData.billPostalCode
-      if (checkoutData.billAreaCode) billObj.area_code = checkoutData.billAreaCode
-      if (checkoutData.billDescriptor) billObj.descriptor = checkoutData.billDescriptor
-      if (checkoutData.billAddressCollection) billObj.billing_address_collection = checkoutData.billAddressCollection
-      
-      if (Object.keys(billObj).length > 0) {
+      const billObj = buildAddressObject('bill')
+      if (billObj) {
         requestData.bill = billObj
       }
     }
 
     // 构建收货信息对象（shipping）- 只有当开关启用时才构建
     if (checkoutData.enableShipInfo) {
-      const shipObj = {}
-      if (checkoutData.shipFirstName) shipObj.first_name = checkoutData.shipFirstName
-      if (checkoutData.shipLastName) shipObj.last_name = checkoutData.shipLastName
-      if (checkoutData.shipEmail) shipObj.email = checkoutData.shipEmail
-      if (checkoutData.shipPhone) shipObj.phone_number = checkoutData.shipPhone
-      if (checkoutData.shipAddressLine1) shipObj.address_line1 = checkoutData.shipAddressLine1
-      if (checkoutData.shipCountry) shipObj.country = checkoutData.shipCountry
-      if (checkoutData.shipState) shipObj.state = checkoutData.shipState
-      if (checkoutData.shipCity) shipObj.city = checkoutData.shipCity
-      if (checkoutData.shipPostalCode) shipObj.postal_code = checkoutData.shipPostalCode
-      if (checkoutData.shipAreaCode) shipObj.area_code = checkoutData.shipAreaCode
-      
-      if (Object.keys(shipObj).length > 0) {
+      const shipObj = buildAddressObject('ship')
+      if (shipObj) {
         requestData.shipping = shipObj
       }
     }
@@ -1595,20 +1295,15 @@ const createCheckout = async () => {
       requestData,
       {
         appId: apiConfig.appId,
-        timestamp: null, // 强制API服务自动生成新的timestamp
-        nonce: null, // 强制API服务自动生成新的nonce
-        signAlg: apiConfig.signAlg,
-        sign: null, // 强制API服务自动生成新的签名（基于最新的请求数据）
+        timestamp: null, // 由签名方法自动生成
+        nonce: null, // 由签名方法自动生成
+        signAlg: 'SHA256_WITH_RSA', // 固定值
+        sign: null, // 由签名方法自动生成
         privateKey: apiConfig.privateKey
       }
     )
     
-    // 更新显示值（从响应中获取实际使用的值）
-    if (response.requestHeaders) {
-      apiConfig.timestamp = response.requestHeaders._generated_timestamp || parseInt(response.requestHeaders['x-paykka-timestamp']) || apiConfig.timestamp
-      apiConfig.nonce = response.requestHeaders._generated_nonce || response.requestHeaders['x-paykka-nonce'] || apiConfig.nonce
-      apiConfig.sign = response.requestHeaders['x-paykka-sign'] || apiConfig.sign
-    }
+    // 签名相关参数由签名方法自动管理，无需更新显示值
 
     // 从响应数据中提取 session_url
     const sessionUrl = response.data?.data?.session_url || response.data?.session_url || response.checkoutUrl || null
@@ -1639,6 +1334,11 @@ const createCheckout = async () => {
     loading.value = false
   }
 }
+
+// 组件挂载时加载商户配置
+onMounted(() => {
+  loadMerchantConfigs()
+})
 </script>
 
 <style scoped>
@@ -1656,14 +1356,45 @@ const createCheckout = async () => {
   max-width: 100%;
 }
 
+.header-with-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 0.4rem;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  left: 0;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateX(-2px);
+}
+
 .title {
   color: white;
   text-align: center;
   font-size: 1.4rem;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
   font-weight: 600;
   padding: 0;
+  flex: 1;
 }
 
 .test-panel {
@@ -1733,6 +1464,35 @@ const createCheckout = async () => {
 .section-header h3 {
   margin: 0;
   flex: 1;
+}
+
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.btn-random-section {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn-random-section:hover:not(:disabled) {
+  background: #5568d3;
+  transform: translateY(-1px);
+}
+
+.btn-random-section:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .toggle-switch {
@@ -1828,9 +1588,11 @@ const createCheckout = async () => {
   border-color: #ccc;
 }
 
-.input-field.readonly {
+.input-field.readonly,
+.textarea.readonly {
   background: #f5f5f5;
   cursor: not-allowed;
+  color: #666;
 }
 
 .textarea {
@@ -1859,9 +1621,71 @@ const createCheckout = async () => {
   line-height: 1.2;
 }
 
+.info-box {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 6px;
+  padding: 0.8rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.info-box p {
+  margin: 0 0 0.5rem 0;
+  color: #1976d2;
+  font-size: 0.85rem;
+}
+
+.info-box ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #424242;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.info-box li {
+  margin-bottom: 0.3rem;
+}
+
 .required {
   color: #e74c3c;
   font-weight: bold;
+}
+
+.private-key-container {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.private-key-container .input-field,
+.private-key-container .textarea {
+  flex: 1;
+}
+
+.btn-toggle-key {
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  white-space: nowrap;
+  height: fit-content;
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.btn-toggle-key:hover {
+  background: #5568d3;
+}
+
+.private-key-container input[readonly] {
+  cursor: pointer;
 }
 
 .input-with-button {

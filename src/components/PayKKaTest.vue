@@ -1,7 +1,10 @@
 <template>
   <div class="paykka-test">
     <div class="container">
-      <h1 class="title">PayKKa 交易接口测试</h1>
+      <div class="header-with-back">
+        <button @click="$emit('back')" class="back-button">← 返回首页</button>
+        <h1 class="title">PayKKa 交易接口测试</h1>
+      </div>
       
       <div class="test-panel">
         <div class="form-section">
@@ -19,12 +22,17 @@
 
           <div class="form-group">
             <label>商户ID (Merchant ID)</label>
-            <input 
-              v-model="apiConfig.merchantId" 
-              type="text" 
-              placeholder="请输入商户ID"
+            <select 
+              v-model="selectedMerchantId" 
+              @change="onMerchantChange"
               class="input-field"
-            />
+            >
+              <option value="">-- 请选择商户 --</option>
+              <option v-for="config in merchantConfigs" :key="config.merchantId" :value="config.merchantId">
+                {{ config.name || config.merchantId }}
+              </option>
+            </select>
+            <small class="field-desc">从已配置的商户中选择，选择后将自动填充App ID和私钥</small>
           </div>
 
           <div class="form-group">
@@ -160,10 +168,42 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { payKKaApi } from '../services/paykkaApi'
+import { getAllConfigs, getConfigByMerchantId } from '../services/configManager'
+
+defineEmits(['back'])
 
 const loading = ref(false)
+
+// 商户配置相关
+const merchantConfigs = ref([])
+const selectedMerchantId = ref('')
+
+// 加载商户配置列表
+const loadMerchantConfigs = () => {
+  merchantConfigs.value = getAllConfigs()
+  // 如果有默认配置，自动选择
+  if (merchantConfigs.value.length > 0 && !selectedMerchantId.value) {
+    const defaultConfig = merchantConfigs.value.find(c => c.merchantId === apiConfig.merchantId) || merchantConfigs.value[0]
+    selectedMerchantId.value = defaultConfig.merchantId
+    onMerchantChange()
+  }
+}
+
+// 商户选择变化时，自动填充配置
+const onMerchantChange = () => {
+  if (!selectedMerchantId.value) {
+    return
+  }
+  
+  const config = getConfigByMerchantId(selectedMerchantId.value)
+  if (config) {
+    apiConfig.merchantId = config.merchantId
+    // PayKKaTest使用apiKey，这里用privateKey填充
+    apiConfig.apiKey = config.privateKey
+  }
+}
 
 const apiConfig = reactive({
   baseUrl: 'https://api.paykka.com',
@@ -290,6 +330,11 @@ const submitTransaction = async () => {
     loading.value = false
   }
 }
+
+// 组件挂载时加载商户配置
+onMounted(() => {
+  loadMerchantConfigs()
+})
 </script>
 
 <style scoped>
@@ -304,12 +349,43 @@ const submitTransaction = async () => {
   margin: 0 auto;
 }
 
+.header-with-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  left: 0;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateX(-2px);
+}
+
 .title {
   color: white;
   text-align: center;
   font-size: 2.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  flex: 1;
 }
 
 .test-panel {
