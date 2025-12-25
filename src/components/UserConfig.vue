@@ -18,10 +18,11 @@
           </div>
           
           <div v-else class="config-list">
-            <div v-for="(config, index) in configs" :key="config.merchantId" class="config-item">
+            <div v-for="(config, index) in configs" :key="config.merchantId" class="config-item" :class="{ 'is-default': config.isDefault }">
               <div class="config-info">
                 <div class="config-name">
                   <strong>{{ config.name || config.merchantId }}</strong>
+                  <span v-if="config.isDefault" class="default-badge">默认</span>
                   <span class="config-id">商户ID: {{ config.merchantId }}</span>
                 </div>
                 <div class="config-details">
@@ -40,6 +41,14 @@
                 </div>
               </div>
               <div class="config-actions">
+                <button 
+                  v-if="!config.isDefault" 
+                  @click="setAsDefault(index)" 
+                  class="btn-default"
+                  title="设为默认配置"
+                >
+                  设为默认
+                </button>
                 <button @click="editConfig(index)" class="btn-edit">编辑</button>
                 <button @click="deleteConfig(index)" class="btn-delete">删除</button>
               </div>
@@ -71,11 +80,12 @@
               class="input-field"
             />
             <datalist id="api-url-list">
+              <option value="https://openapi.eu.paykka.com">openapi.eu.paykka.com</option>
+              <option value="https://openapi.paykka.com">openapi.paykka.com</option>
+              <option value="https://openapi-sandbox.paykka.com">openapi-sandbox.paykka.com</option>
+              <option value="https://api-sandbox.paykka.com">api-sandbox.paykka.com</option>
               <option value="https://openapi-dev.paykka.com">openapi-dev.paykka.com</option>
               <option value="https://openapi-fat.paykka.com">openapi-fat.paykka.com</option>
-              <option value="https://openapi-sandbox.paykka.com">openapi-sandbox.paykka.com</option>
-              <option value="https://openapi.paykka.com">openapi.paykka.com</option>
-              <option value="https://openapi.eu.paykka.com">openapi.eu.paykka.com</option>
               <option value="http://localhost:8080">localhost:8080</option>
             </datalist>
             <small class="field-desc">API服务器地址</small>
@@ -114,6 +124,18 @@
             <small class="field-desc">RSA私钥，用于签名生成</small>
           </div>
           
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input 
+                type="checkbox" 
+                v-model="formData.isDefault"
+                class="checkbox-input"
+              />
+              <span>设为默认配置</span>
+            </label>
+            <small class="field-desc">默认配置将在测试页面中自动选中</small>
+          </div>
+          
           <div class="button-group">
             <button @click="saveConfig" class="btn-primary" :disabled="!isFormValid">保存</button>
             <button @click="cancelForm" class="btn-secondary">取消</button>
@@ -126,7 +148,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { getAllConfigs, saveAllConfigs, deleteConfig as deleteConfigUtil } from '../services/configManager'
+import { getAllConfigs, saveAllConfigs, deleteConfig as deleteConfigUtil, setDefaultConfig as setDefaultConfigUtil } from '../services/configManager'
 
 defineEmits(['back'])
 
@@ -139,7 +161,8 @@ const formData = reactive({
   baseUrl: 'https://openapi-dev.paykka.com',
   merchantId: '',
   appId: '',
-  privateKey: ''
+  privateKey: '',
+  isDefault: false
 })
 
 const isFormValid = computed(() => {
@@ -166,7 +189,27 @@ const saveConfig = () => {
     baseUrl: formData.baseUrl.trim(),
     merchantId: formData.merchantId.trim(),
     appId: formData.appId.trim(),
-    privateKey: formData.privateKey.trim()
+    privateKey: formData.privateKey.trim(),
+    isDefault: formData.isDefault || false
+  }
+  
+  // 如果设置为默认，先取消其他配置的默认标记
+  if (config.isDefault) {
+    configs.value.forEach(c => {
+      if (c.merchantId !== config.merchantId) {
+        c.isDefault = false
+      }
+    })
+  } else if (editingIndex.value !== null) {
+    // 如果编辑时取消默认，也要更新
+    const oldConfig = configs.value[editingIndex.value]
+    if (oldConfig && oldConfig.isDefault) {
+      // 如果取消默认，检查是否还有其他配置，如果有则设置第一个为默认
+      const otherConfigs = configs.value.filter((c, idx) => idx !== editingIndex.value)
+      if (otherConfigs.length > 0) {
+        otherConfigs[0].isDefault = true
+      }
+    }
   }
   
   if (editingIndex.value !== null) {
@@ -215,8 +258,20 @@ const editConfig = (index) => {
   formData.merchantId = config.merchantId
   formData.appId = config.appId
   formData.privateKey = config.privateKey
+  formData.isDefault = config.isDefault || false
   editingIndex.value = index
   showAddForm.value = true
+}
+
+// 设为默认配置
+const setAsDefault = (index) => {
+  const merchantId = configs.value[index].merchantId
+  if (setDefaultConfigUtil(merchantId)) {
+    loadConfigs()
+    alert('已设置为默认配置')
+  } else {
+    alert('设置失败，请重试')
+  }
 }
 
 // 删除配置
@@ -241,6 +296,7 @@ const cancelForm = () => {
   formData.merchantId = ''
   formData.appId = ''
   formData.privateKey = ''
+  formData.isDefault = false
 }
 
 onMounted(() => {
@@ -352,6 +408,21 @@ onMounted(() => {
 .config-item:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-color: #667eea;
+}
+
+.config-item.is-default {
+  border-color: #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+}
+
+.default-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
 }
 
 .config-info {
@@ -540,6 +611,36 @@ onMounted(() => {
 
 .btn-delete:hover {
   background: #c0392b;
+}
+
+.btn-default {
+  background: #667eea;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.btn-default:hover {
+  background: #5568d3;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {

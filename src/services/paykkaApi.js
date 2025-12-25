@@ -3,6 +3,8 @@
  * 用于处理PayKKa跨境支付接口调用
  */
 
+import { getProxyUrl, getProxyHeaders } from '../utils/apiProxy'
+
 /**
  * 生成签名
  * @param {Object} params - 请求参数
@@ -31,11 +33,44 @@ function generateSignature(params, apiKey) {
  */
 export async function testConnection(baseUrl) {
   try {
-    const response = await fetch(`${baseUrl}/health`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
+    // 通过后端代理接口解决 CORS 问题
+    const proxyUrl = getProxyUrl(baseUrl, '/health')
+    const proxyHeaders = getProxyHeaders(baseUrl, '/health', {
+      'Content-Type': 'application/json'
+    })
+    
+    // 如果 proxyHeaders 为 null，说明是本地服务，直接请求
+    if (!proxyHeaders) {
+      const response = await fetch(`${baseUrl}/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        mode: 'cors',
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer-when-downgrade'
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
+      
+      const data = await response.json()
+      return {
+        success: true,
+        message: '连接成功',
+        data: data
+      }
+    }
+    
+    // 使用代理接口，请求头放在 HTTP 请求头中，所有代理请求都使用 POST
+    const response = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: proxyHeaders,
+      body: '', // GET 请求也需要 body（可以为空）
+      mode: 'cors', // 启用 CORS
+      credentials: 'omit', // 不发送 cookies
+      referrerPolicy: 'no-referrer-when-downgrade' // 设置引荐来源策略
     })
 
     if (!response.ok) {
@@ -92,15 +127,51 @@ export async function submitTransaction(baseUrl, merchantId, apiKey, transaction
     const signature = generateSignature(requestParams, apiKey)
     requestParams.sign = signature
 
-    // 发送请求
-    const response = await fetch(`${baseUrl}/api/transaction`, {
+    // 发送请求（通过后端代理接口解决 CORS 问题）
+    const proxyUrl = getProxyUrl(baseUrl, '/api/transaction')
+    const requestBody = JSON.stringify(requestParams)
+    const proxyHeaders = getProxyHeaders(baseUrl, '/api/transaction', {
+      'Content-Type': 'application/json',
+      'X-Merchant-Id': merchantId,
+      'X-API-Key': apiKey
+    })
+    
+    // 如果 proxyHeaders 为 null，说明是本地服务，直接请求
+    if (!proxyHeaders) {
+      const response = await fetch(`${baseUrl}/api/transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Merchant-Id': merchantId,
+          'X-API-Key': apiKey
+        },
+        body: requestBody,
+        mode: 'cors',
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer-when-downgrade'
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return {
+        success: true,
+        message: '交易提交成功',
+        data: data
+      }
+    }
+    
+    // 使用代理接口，请求头放在 HTTP 请求头中，body 包含原始请求体
+    const response = await fetch(proxyUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Merchant-Id': merchantId,
-        'X-API-Key': apiKey
-      },
-      body: JSON.stringify(requestParams)
+      headers: proxyHeaders,
+      body: requestBody,
+      mode: 'cors', // 启用 CORS
+      credentials: 'omit', // 不发送 cookies
+      referrerPolicy: 'no-referrer-when-downgrade' // 设置引荐来源策略
     })
 
     if (!response.ok) {
@@ -156,14 +227,51 @@ export async function queryTransaction(baseUrl, merchantId, apiKey, orderNo) {
     const signature = generateSignature(requestParams, apiKey)
     requestParams.sign = signature
 
-    const response = await fetch(`${baseUrl}/api/transaction/query`, {
+    // 发送请求（通过后端代理接口解决 CORS 问题）
+    const proxyUrl = getProxyUrl(baseUrl, '/api/transaction/query')
+    const requestBody = JSON.stringify(requestParams)
+    const proxyHeaders = getProxyHeaders(baseUrl, '/api/transaction/query', {
+      'Content-Type': 'application/json',
+      'X-Merchant-Id': merchantId,
+      'X-API-Key': apiKey
+    })
+    
+    // 如果 proxyHeaders 为 null，说明是本地服务，直接请求
+    if (!proxyHeaders) {
+      const response = await fetch(`${baseUrl}/api/transaction/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Merchant-Id': merchantId,
+          'X-API-Key': apiKey
+        },
+        body: requestBody,
+        mode: 'cors',
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer-when-downgrade'
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return {
+        success: true,
+        message: '查询成功',
+        data: data
+      }
+    }
+    
+    // 使用代理接口，请求头放在 HTTP 请求头中，body 包含原始请求体
+    const response = await fetch(proxyUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Merchant-Id': merchantId,
-        'X-API-Key': apiKey
-      },
-      body: JSON.stringify(requestParams)
+      headers: proxyHeaders,
+      body: requestBody,
+      mode: 'cors', // 启用 CORS
+      credentials: 'omit', // 不发送 cookies
+      referrerPolicy: 'no-referrer-when-downgrade' // 设置引荐来源策略
     })
 
     if (!response.ok) {

@@ -21,13 +21,8 @@ export default defineConfig({
     open: true, // 自动打开浏览器
     cors: true, // 启用CORS
     proxy: {
-      // 代理配置，用于解决跨域问题（如果需要）
-      '/api': {
-        target: 'https://api.paykka.com',
-        changeOrigin: true,
-        secure: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
-      }
+      // Vite 代理配置已移除，现在使用后端代理接口
+      // 后端代理接口路径可通过环境变量 VITE_PROXY_BASE_URL 配置（默认：/api/proxy）
     }
   },
   build: {

@@ -76,7 +76,48 @@ export function deleteConfig(merchantId) {
  */
 export function getDefaultConfig() {
   const configs = getAllConfigs()
+  // 优先查找标记为默认的配置
+  const defaultConfig = configs.find(config => config.isDefault === true)
+  if (defaultConfig) {
+    return defaultConfig
+  }
+  // 如果没有默认配置，返回第一个配置（向后兼容）
   return configs.length > 0 ? configs[0] : null
+}
+
+/**
+ * 设置默认配置
+ * @param {string} merchantId - 商户ID
+ * @returns {boolean} 是否成功
+ */
+export function setDefaultConfig(merchantId) {
+  const configs = getAllConfigs()
+  
+  // 先取消所有配置的默认标记
+  configs.forEach(config => {
+    config.isDefault = false
+  })
+  
+  // 设置指定配置为默认
+  const config = configs.find(c => c.merchantId === merchantId)
+  if (config) {
+    config.isDefault = true
+    return saveAllConfigs(configs)
+  }
+  
+  return false
+}
+
+/**
+ * 取消默认配置
+ * @returns {boolean} 是否成功
+ */
+export function clearDefaultConfig() {
+  const configs = getAllConfigs()
+  configs.forEach(config => {
+    config.isDefault = false
+  })
+  return saveAllConfigs(configs)
 }
 
 

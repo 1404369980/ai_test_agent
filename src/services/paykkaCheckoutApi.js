@@ -5,6 +5,7 @@
 
 import CryptoJS from 'crypto-js'
 import { generateHeaderSign } from './signatureUtils'
+import { getProxyUrl, getProxyHeaders } from '../utils/apiProxy'
 
 /**
  * 生成MD5哈希
@@ -131,11 +132,49 @@ export async function createCheckout(baseUrl, merchantId, checkoutData, headers 
       requestHeaders['x-paykka-sign'] = sign
     }
 
-    // 发送请求
-    const response = await fetch(`${baseUrl}/v3/payment/acq/session`, {
+    // 发送请求（通过后端代理接口解决 CORS 问题）
+    const proxyUrl = getProxyUrl(baseUrl, '/v3/payment/acq/session')
+    const proxyHeaders = getProxyHeaders(baseUrl, '/v3/payment/acq/session', requestHeaders)
+    
+    // 如果 proxyHeaders 为 null，说明是本地服务，直接请求
+    if (!proxyHeaders) {
+      const response = await fetch(`${baseUrl}/v3/payment/acq/session`, {
+        method: 'POST',
+        headers: requestHeaders,
+        body: requestBody,
+        mode: 'cors',
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer-when-downgrade'
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || errorData.ret_msg || `HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return {
+        success: true,
+        message: '收银台创建成功',
+        signedData: requestParams,
+        requestHeaders: {
+          ...requestHeaders,
+          _generated_timestamp: timestamp,
+          _generated_nonce: nonce
+        },
+        data: data,
+        checkoutUrl: data.data?.session_url || data.checkoutUrl || data.url || data.redirectUrl
+      }
+    }
+    
+    // 使用代理接口，请求头放在 HTTP 请求头中，body 包含原始请求体
+    const response = await fetch(proxyUrl, {
       method: 'POST',
-      headers: requestHeaders,
-      body: requestBody
+      headers: proxyHeaders,
+      body: requestBody,
+      mode: 'cors', // 启用 CORS
+      credentials: 'omit', // 不发送 cookies
+      referrerPolicy: 'no-referrer-when-downgrade' // 设置引荐来源策略
     })
 
     if (!response.ok) {
@@ -257,14 +296,53 @@ export async function queryCheckout(baseUrl, merchantId, secretKey, checkoutId) 
     const signature = generateSignature(requestParams, secretKey)
     requestParams.sign = signature
 
-    const response = await fetch(`${baseUrl}/api/v3/checkout/query`, {
+    // 发送请求（通过后端代理接口解决 CORS 问题）
+    const proxyUrl = getProxyUrl(baseUrl, '/api/v3/checkout/query')
+    const requestBody = JSON.stringify(requestParams)
+    const proxyHeaders = getProxyHeaders(baseUrl, '/api/v3/checkout/query', {
+      'Content-Type': 'application/json',
+      'X-Merchant-Id': merchantId,
+      'X-API-Key': secretKey
+    })
+    
+    // 如果 proxyHeaders 为 null，说明是本地服务，直接请求
+    if (!proxyHeaders) {
+      const response = await fetch(`${baseUrl}/api/v3/checkout/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Merchant-Id': merchantId,
+          'X-API-Key': secretKey
+        },
+        body: requestBody,
+        mode: 'cors',
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer-when-downgrade'
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || errorData.ret_msg || `HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return {
+        success: true,
+        message: '查询成功',
+        signature: signature,
+        signedData: requestParams,
+        data: data
+      }
+    }
+    
+    // 使用代理接口，请求头放在 HTTP 请求头中，body 包含原始请求体
+    const response = await fetch(proxyUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Merchant-Id': merchantId,
-        'X-API-Key': secretKey
-      },
-      body: JSON.stringify(requestParams)
+      headers: proxyHeaders,
+      body: requestBody,
+      mode: 'cors', // 启用 CORS
+      credentials: 'omit', // 不发送 cookies
+      referrerPolicy: 'no-referrer-when-downgrade' // 设置引荐来源策略
     })
 
     if (!response.ok) {

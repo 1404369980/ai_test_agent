@@ -690,19 +690,12 @@
                 <pre class="code-block">{{ formatJson(result.responseData) }}</pre>
               </div>
 
-              <div v-if="result.sessionUrl" class="result-item success">
-                <label>收银台URL (Session URL):</label>
-                <a :href="result.sessionUrl" target="_blank" class="checkout-link">
-                  {{ result.sessionUrl }}
+              <div v-if="result.sessionUrl || result.checkoutUrl" class="result-item success">
+                <label>收银台URL:</label>
+                <a :href="result.sessionUrl || result.checkoutUrl" target="_blank" class="checkout-link">
+                  {{ result.sessionUrl || result.checkoutUrl }}
                 </a>
                 <small class="field-desc">点击链接在新页面打开收银台</small>
-              </div>
-
-              <div v-if="result.checkoutUrl && !result.sessionUrl" class="result-item success">
-                <label>收银台URL:</label>
-                <a :href="result.checkoutUrl" target="_blank" class="checkout-link">
-                  {{ result.checkoutUrl }}
-                </a>
               </div>
 
               <div v-if="result.error" class="result-item error">
@@ -734,7 +727,7 @@ import {
   generateRandomAreaCode as generateRandomAreaCodeUtil
 } from '../services/utils'
 // 签名相关功能已由 payKKaCheckoutApi 内部管理，无需在此处导入
-import { getAllConfigs, getConfigByMerchantId } from '../services/configManager'
+import { getAllConfigs, getConfigByMerchantId, getDefaultConfig } from '../services/configManager'
 
 const props = defineProps({
   title: {
@@ -766,9 +759,14 @@ const showPrivateKeyFull = ref(false)
 // 加载商户配置列表
 const loadMerchantConfigs = () => {
   merchantConfigs.value = getAllConfigs()
-  // 如果有配置，自动选择第一个
+  // 如果有配置，优先选择默认配置，否则选择第一个
   if (merchantConfigs.value.length > 0 && !selectedMerchantId.value) {
-    selectedMerchantId.value = merchantConfigs.value[0].merchantId
+    const defaultConfig = getDefaultConfig()
+    if (defaultConfig) {
+      selectedMerchantId.value = defaultConfig.merchantId
+    } else {
+      selectedMerchantId.value = merchantConfigs.value[0].merchantId
+    }
     onMerchantChange()
   }
 }
@@ -2049,6 +2047,7 @@ onMounted(() => {
   background: #667eea;
   color: white;
 }
+
 
 .signature-code {
   background: #fff3cd;

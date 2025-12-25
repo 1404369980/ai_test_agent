@@ -170,7 +170,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { payKKaApi } from '../services/paykkaApi'
-import { getAllConfigs, getConfigByMerchantId, getDefaultConfig } from '../services/configManager'
+import { getAllConfigs, getConfigByMerchantId } from '../services/configManager'
 
 defineEmits(['back'])
 
@@ -183,14 +183,9 @@ const selectedMerchantId = ref('')
 // 加载商户配置列表
 const loadMerchantConfigs = () => {
   merchantConfigs.value = getAllConfigs()
-  // 如果有配置，优先选择默认配置，否则选择第一个
+  // 如果有配置，自动选择第一个
   if (merchantConfigs.value.length > 0 && !selectedMerchantId.value) {
-    const defaultConfig = getDefaultConfig()
-    if (defaultConfig) {
-      selectedMerchantId.value = defaultConfig.merchantId
-    } else {
-      selectedMerchantId.value = merchantConfigs.value[0].merchantId
-    }
+    selectedMerchantId.value = merchantConfigs.value[0].merchantId
     onMerchantChange()
   }
 }
@@ -205,7 +200,7 @@ const onMerchantChange = () => {
   if (config) {
     apiConfig.baseUrl = config.baseUrl || 'https://api.paykka.com'
     apiConfig.merchantId = config.merchantId
-    // PayKKaApiTest使用apiKey，这里用privateKey填充
+    // PayKKaTest使用apiKey，这里用privateKey填充
     apiConfig.apiKey = config.privateKey
   }
 }
