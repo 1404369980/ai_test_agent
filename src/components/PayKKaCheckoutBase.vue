@@ -193,13 +193,22 @@
 
           <div class="form-row-3">
             <div class="form-group">
-              <label>回调地址 (Callback URL)</label>
+              <label>请款方式 (Capture Method) <span class="required">*</span></label>
+              <select v-model="checkoutData.captureMethod" class="input-field">
+                <option value="AUTOMATIC">AUTOMATIC - 自动</option>
+                <option value="MANUAL">MANUAL - 手动</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>过期时间 (Expire Time)</label>
               <input 
-                v-model="checkoutData.callbackUrl" 
-                type="text" 
-                placeholder="https://your-domain.com/callback"
+                v-model="checkoutData.expireTime" 
+                type="datetime-local"
                 class="input-field"
+                placeholder="2023-11-24T11:34:37+0800"
               />
+              <small class="field-desc">格式: YYYY-MM-DDTHH:mm:ss+0800</small>
             </div>
 
             <div class="form-group">
@@ -211,7 +220,9 @@
                 class="input-field"
               />
             </div>
+          </div>
 
+          <div class="form-row-3">
             <div class="form-group">
               <label>失败返回地址 (Cancel URL)</label>
               <input 
@@ -242,50 +253,58 @@
               </label>
             </div>
           </div>
-          <div class="form-row-2" :class="{ 'disabled-section': !checkoutData.enableCustomerInfo }">
+          <div class="form-row-4" :class="{ 'disabled-section': !checkoutData.enableCustomerInfo }">
             <div class="form-group">
-              <label>国家代码 (Country)</label>
+              <label>客户姓名 (Name) <span class="required">*</span></label>
               <input 
-                v-model="checkoutData.country" 
+                v-model="checkoutData.customerName" 
                 type="text" 
-                list="country-list"
-                placeholder="选择或输入国家代码"
+                placeholder="Charlie Brown"
                 class="input-field"
                 :disabled="!checkoutData.enableCustomerInfo"
               />
-              <datalist id="country-list">
-                <option value="CN">CN - 中国</option>
-                <option value="US">US - 美国</option>
-                <option value="GB">GB - 英国</option>
-                <option value="JP">JP - 日本</option>
-                <option value="SG">SG - 新加坡</option>
-                <option value="HK">HK - 香港</option>
-                <option value="FR">FR - 法国</option>
-                <option value="DE">DE - 德国</option>
-                <option value="IT">IT - 意大利</option>
-                <option value="ES">ES - 西班牙</option>
-              </datalist>
             </div>
             <div class="form-group">
-              <label>语言 (Language)</label>
+              <label>客户邮箱 (Email) <span class="required">*</span></label>
               <input 
-                v-model="checkoutData.language" 
-                type="text" 
-                list="language-list"
-                placeholder="选择或输入语言"
+                v-model="checkoutData.customerEmail" 
+                type="email" 
+                placeholder="charlie.brown2519@gmail.com"
                 class="input-field"
                 :disabled="!checkoutData.enableCustomerInfo"
               />
-              <datalist id="language-list">
-                <option value="zh-CN">zh-CN - 简体中文</option>
-                <option value="zh-TW">zh-TW - 繁体中文</option>
-                <option value="en-US">en-US - 英语</option>
-                <option value="ja-JP">ja-JP - 日语</option>
-                <option value="en-GB">en-GB - 英语(英国)</option>
-                <option value="fr-FR">fr-FR - 法语</option>
-                <option value="de-DE">de-DE - 德语</option>
-                <option value="es-ES">es-ES - 西班牙语</option>
-              </datalist>
+            </div>
+            <div class="form-group">
+              <label>客户电话 (Phone) <span class="required">*</span></label>
+              <input 
+                v-model="checkoutData.customerPhone" 
+                type="text" 
+                placeholder="+1 622 5406475"
+                class="input-field"
+                :disabled="!checkoutData.enableCustomerInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>客户ID (ID) <span class="required">*</span></label>
+              <input 
+                v-model="checkoutData.customerId" 
+                type="text" 
+                placeholder="CUST1766744364378"
+                class="input-field"
+                :disabled="!checkoutData.enableCustomerInfo"
+              />
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !checkoutData.enableCustomerInfo }">
+            <div class="form-group">
+              <label>订单IP (Order IP) <span class="required">*</span></label>
+              <input 
+                v-model="checkoutData.customerOrderIp" 
+                type="text" 
+                placeholder="234.53.90.193"
+                class="input-field"
+                :disabled="!checkoutData.enableCustomerInfo"
+              />
             </div>
           </div>
 
@@ -588,63 +607,6 @@
             </div>
           </div>
 
-          <div class="divider"></div>
-
-          <h3>高级参数</h3>
-
-          <div class="form-row-3">
-            <div class="form-group">
-              <label>超时时间 (Timeout 秒)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model.number="checkoutData.timeout" 
-                  type="number" 
-                  placeholder="1800"
-                  class="input-field"
-                />
-                <button @click="generateRandomTimeout" class="btn-small">随机</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>商品ID (Product ID)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.productId" 
-                  type="text" 
-                  placeholder="商品ID"
-                  class="input-field"
-                />
-                <button @click="generateRandomProductId" class="btn-small">随机</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>商品类别 (Product Category)</label>
-              <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.productCategory" 
-                  type="text" 
-                  placeholder="商品类别"
-                  class="input-field"
-                />
-                <button @click="generateRandomCategory" class="btn-small">随机</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>备注 (Remark)</label>
-            <div class="input-with-button">
-              <input 
-                v-model="checkoutData.remark" 
-                type="text" 
-                placeholder="备注信息"
-                class="input-field"
-              />
-              <button @click="generateRandomRemark" class="btn-small">随机</button>
-            </div>
-          </div>
-          
-
           <div class="button-group">
             <button @click="generateAllRandom" class="btn-random">一键随机生成所有参数</button>
             <button @click="createCheckout" :disabled="loading" class="btn-primary">
@@ -655,6 +617,53 @@
         </div>
 
         <div class="result-section">
+          <div class="form-group">
+            <div class="json-header">
+              <label>生成的请求参数 (Request Parameters)</label>
+              <button @click="toggleJsonCollapse" class="btn-toggle-collapse" :title="isJsonCollapsed ? '展开' : '折叠'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path v-if="isJsonCollapsed" d="M9 18l6-6-6-6"/>
+                  <path v-else d="M18 15l-6-6-6 6"/>
+                </svg>
+                {{ isJsonCollapsed ? '展开' : '折叠' }}
+              </button>
+            </div>
+            <div v-show="!isJsonCollapsed" class="json-display-container">
+              <textarea 
+                v-model="editableJson" 
+                class="json-edit"
+                :placeholder="requestParamsJson"
+                spellcheck="false"
+              ></textarea>
+              <div class="json-actions">
+                <button @click="updateFormFromJson" class="btn-update" title="更新表单">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  更新表单
+                </button>
+                <button @click="copyJson" class="btn-copy" title="复制JSON">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  复制
+                </button>
+                <button @click="resetJson" class="btn-reset" title="重置JSON">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                  </svg>
+                  重置
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
           <h2>测试结果</h2>
           
           <div v-if="!result" class="empty-state">
@@ -678,11 +687,6 @@
               <div v-if="result.requestHeaders" class="result-item">
                 <label>请求头 (Headers):</label>
                 <pre class="code-block">{{ formatJson(result.requestHeaders) }}</pre>
-              </div>
-
-              <div class="result-item">
-                <label>请求参数 (含签名):</label>
-                <pre class="code-block">{{ formatJson(result.requestData) }}</pre>
               </div>
 
               <div class="result-item">
@@ -711,7 +715,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { payKKaCheckoutApi } from '../services/paykkaCheckoutApi'
 import { 
   generateRandomIP,
@@ -817,21 +821,21 @@ const checkoutData = reactive({
   paymentType: 'PURCHASE',
   sessionMode: props.defaultSessionMode,
   description: '',
-  callbackUrl: '',
+  captureMethod: 'AUTOMATIC',
+  expireTime: '',
   returnUrl: '',
   cancelUrl: '',
   // 开关控制
   enableCustomerInfo: true,
   enableBillInfo: false,
   enableShipInfo: false,
+  customerName: '',
+  customerEmail: '',
+  customerPhone: '',
+  customerId: '',
+  customerOrderIp: '',
   customer: '',
   goods: '',
-  country: '',
-  language: '',
-  timeout: 1800,
-  productId: '',
-  productCategory: '',
-  remark: '',
   // 账单信息
   billFirstName: '',
   billLastName: '',
@@ -860,12 +864,55 @@ const checkoutData = reactive({
 
 const result = ref(null)
 
+// JSON展示相关
+const isJsonCollapsed = ref(false)
+const editableJson = ref('')
+const isManuallyEditingJson = ref(false) // 标记用户是否正在手动编辑JSON
+
 // 随机生成交易ID
 const generateTransId = () => {
   const timestamp = Date.now()
   const random = Math.floor(Math.random() * 100000)
   checkoutData.transId = `TXN${timestamp}${random}`
 }
+
+// 构建 customer JSON 对象（从表单字段）
+const buildCustomerJson = () => {
+  if (!checkoutData.enableCustomerInfo) {
+    return ''
+  }
+  
+  const customerObj = {
+    name: checkoutData.customerName || '',
+    email: checkoutData.customerEmail || '',
+    phone: checkoutData.customerPhone || '',
+    id: checkoutData.customerId || '',
+    order_ip: checkoutData.customerOrderIp || ''
+  }
+  
+  // 只有当所有必填字段都有值时才返回 JSON
+  if (customerObj.name && customerObj.email && customerObj.phone && customerObj.id && customerObj.order_ip) {
+    return JSON.stringify(customerObj, null, 2)
+  }
+  
+  return ''
+}
+
+// 监听客户信息字段变化，自动更新 customer JSON
+watch([
+  () => checkoutData.customerName,
+  () => checkoutData.customerEmail,
+  () => checkoutData.customerPhone,
+  () => checkoutData.customerId,
+  () => checkoutData.customerOrderIp,
+  () => checkoutData.enableCustomerInfo
+], () => {
+  if (checkoutData.enableCustomerInfo) {
+    checkoutData.customer = buildCustomerJson()
+  } else {
+    checkoutData.customer = ''
+  }
+}, { immediate: true })
 
 // 随机生成客户信息（使用公共方法）
 const generateCustomer = () => {
@@ -878,13 +925,13 @@ const generateCustomer = () => {
   // 生成订单IP（用于customer对象中的order_ip字段）
   const orderIp = generateRandomIP()
   
-  checkoutData.customer = JSON.stringify({
-    name: fullName,
-    email: email,
-    phone: phone,
-    id: `CUST${Date.now()}`,
-    order_ip: orderIp // 必填字段，自动生成
-  }, null, 2)
+  checkoutData.customerName = fullName
+  checkoutData.customerEmail = email
+  checkoutData.customerPhone = phone
+  checkoutData.customerId = `CUST${Date.now()}`
+  checkoutData.customerOrderIp = orderIp
+  
+  // customer JSON 会通过 watch 自动更新
 }
 
 // 随机生成商品信息
@@ -948,22 +995,8 @@ const generateRandomDescription = () => {
 // 客户信息字段（customerEmail、customerPhone、customerName、customerId）已移除
 // 这些信息现在只存在于 customer JSON 对象中
 
-// 随机生成国家（使用公共方法）
-const generateRandomCountryLocal = () => {
-  checkoutData.country = generateRandomCountryUtil()
-}
-
-// 随机生成语言
-const generateRandomLanguage = () => {
-  const languages = ['zh-CN', 'zh-TW', 'en-US', 'ja-JP']
-  checkoutData.language = languages[Math.floor(Math.random() * languages.length)]
-}
-
 // 批量生成所有客户信息
 const generateAllCustomerInfo = () => {
-  checkoutData.country = generateRandomCountryUtil()
-  const languages = ['zh-CN', 'zh-TW', 'en-US', 'ja-JP']
-  checkoutData.language = languages[Math.floor(Math.random() * languages.length)]
   // 更新customer JSON对象（包含name、email、phone、id等信息）
   generateCustomer()
 }
@@ -976,28 +1009,6 @@ const generateAllCustomerInfo = () => {
 // 生成请求头签名（自动生成timestamp和nonce）- 使用公共方法
 // 签名方法已由 createCheckout 函数内部自动管理，无需手动生成
 
-// 随机生成超时时间
-const generateRandomTimeout = () => {
-  const timeouts = [600, 900, 1800, 3600, 7200]
-  checkoutData.timeout = timeouts[Math.floor(Math.random() * timeouts.length)]
-}
-
-// 随机生成商品ID
-const generateRandomProductId = () => {
-  checkoutData.productId = `PROD${Date.now()}${Math.floor(Math.random() * 100)}`
-}
-
-// 随机生成商品类别
-const generateRandomCategory = () => {
-  const categories = ['电子产品', '服装', '食品', '图书', '家居', '运动', '美妆', '汽车']
-  checkoutData.productCategory = categories[Math.floor(Math.random() * categories.length)]
-}
-
-// 随机生成备注
-const generateRandomRemark = () => {
-  const remarks = ['测试订单', 'VIP客户', '优先处理', '批量订单', '特殊要求', '加急处理', '']
-  checkoutData.remark = remarks[Math.floor(Math.random() * remarks.length)]
-}
 
 // orderIp 和 customerAddress 已移除，order_ip 在 customer 对象中自动生成
 
@@ -1040,10 +1051,6 @@ const generateAllRandom = () => {
   generateRandomDescription()
   // 使用批量生成函数生成客户信息
   generateAllCustomerInfo()
-  generateRandomTimeout()
-  generateRandomProductId()
-  generateRandomCategory()
-  generateRandomRemark()
   
   // 生成必填字段
   generateTransId()
@@ -1061,7 +1068,17 @@ const generateAllRandom = () => {
   
   // timestamp 和 nonce 由签名方法自动管理，无需手动生成
   
-  checkoutData.callbackUrl = 'https://example.com/callback'
+  // 生成过期时间（未来7天内的随机时间）
+  const now = new Date()
+  const futureDate = new Date(now.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000)
+  const year = futureDate.getFullYear()
+  const month = String(futureDate.getMonth() + 1).padStart(2, '0')
+  const day = String(futureDate.getDate()).padStart(2, '0')
+  const hours = String(futureDate.getHours()).padStart(2, '0')
+  const minutes = String(futureDate.getMinutes()).padStart(2, '0')
+  const seconds = String(futureDate.getSeconds()).padStart(2, '0')
+  checkoutData.expireTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+0800`
+  
   checkoutData.returnUrl = 'https://example.com/success'
   checkoutData.cancelUrl = 'https://example.com/cancel'
 }
@@ -1072,6 +1089,39 @@ const formatJson = (obj) => {
   return JSON.stringify(obj, null, 2)
 }
 
+// 格式化过期时间：将 datetime-local 格式转换为 API 需要的格式
+// 输入格式: "2023-11-24T11:34" 或 "2023-11-24T11:34:37+0800"
+// 输出格式: "2023-11-24T11:34:37+0800"
+const formatExpireTime = (timeStr) => {
+  if (!timeStr || timeStr.trim() === '') return ''
+  
+  // 如果已经是正确格式（包含时区），直接返回
+  const timezonePattern = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}/
+  if (timezonePattern.test(timeStr)) {
+    return timeStr
+  }
+  
+  // 如果是 datetime-local 格式（"2023-11-24T11:34"），转换为 API 格式
+  try {
+    const date = new Date(timeStr)
+    if (isNaN(date.getTime())) {
+      return timeStr
+    }
+    
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    
+    // 默认使用 +0800 时区（中国标准时间）
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+0800`
+  } catch (e) {
+    return timeStr
+  }
+}
+
 // 重置表单
 const resetForm = () => {
   checkoutData.transId = ''
@@ -1080,21 +1130,21 @@ const resetForm = () => {
   checkoutData.paymentType = 'PURCHASE'
   checkoutData.sessionMode = props.defaultSessionMode
   checkoutData.description = ''
-  checkoutData.callbackUrl = ''
+  checkoutData.captureMethod = 'AUTOMATIC'
+  checkoutData.expireTime = ''
   checkoutData.returnUrl = ''
   checkoutData.cancelUrl = ''
   // 重置开关
   checkoutData.enableCustomerInfo = true
   checkoutData.enableBillInfo = false
   checkoutData.enableShipInfo = false
+  checkoutData.customerName = ''
+  checkoutData.customerEmail = ''
+  checkoutData.customerPhone = ''
+  checkoutData.customerId = ''
+  checkoutData.customerOrderIp = ''
   checkoutData.customer = ''
   checkoutData.goods = ''
-  checkoutData.country = ''
-  checkoutData.language = ''
-  checkoutData.timeout = 1800
-  checkoutData.productId = ''
-  checkoutData.productCategory = ''
-  checkoutData.remark = ''
   
   // 账单信息
   checkoutData.billFirstName = ''
@@ -1157,18 +1207,37 @@ const validateJsonData = () => {
   let customerObj = null
   let goodsObj = null
   
-  // 只有当客户信息开关启用时，才验证和解析 customer JSON
+  // 只有当客户信息开关启用时，才验证客户信息字段
   if (checkoutData.enableCustomerInfo) {
-    try {
-      customerObj = JSON.parse(checkoutData.customer)
-      // 验证 customer.order_ip 不能为空
-      if (!customerObj.order_ip || customerObj.order_ip.trim() === '') {
-        alert('客户信息 (Customer) 中的 order_ip 字段不能为空')
-        return null
-      }
-    } catch (e) {
-      alert('客户信息 (Customer) 格式错误，请输入有效的JSON')
+    // 验证必填字段
+    if (!checkoutData.customerName || checkoutData.customerName.trim() === '') {
+      alert('客户姓名 (Name) 不能为空')
       return null
+    }
+    if (!checkoutData.customerEmail || checkoutData.customerEmail.trim() === '') {
+      alert('客户邮箱 (Email) 不能为空')
+      return null
+    }
+    if (!checkoutData.customerPhone || checkoutData.customerPhone.trim() === '') {
+      alert('客户电话 (Phone) 不能为空')
+      return null
+    }
+    if (!checkoutData.customerId || checkoutData.customerId.trim() === '') {
+      alert('客户ID (ID) 不能为空')
+      return null
+    }
+    if (!checkoutData.customerOrderIp || checkoutData.customerOrderIp.trim() === '') {
+      alert('订单IP (Order IP) 不能为空')
+      return null
+    }
+    
+    // 构建 customer 对象
+    customerObj = {
+      name: checkoutData.customerName.trim(),
+      email: checkoutData.customerEmail.trim(),
+      phone: checkoutData.customerPhone.trim(),
+      id: checkoutData.customerId.trim(),
+      order_ip: checkoutData.customerOrderIp.trim()
     }
   }
 
@@ -1191,6 +1260,281 @@ const validateJsonData = () => {
   }
   
   return { customerObj, goodsObj }
+}
+
+// 生成请求参数的辅助函数
+const buildRequestParams = () => {
+  try {
+    // 解析JSON数据
+    let customerObj = null
+    let goodsObj = null
+    
+    // 从表单字段构建 customer 对象
+    if (checkoutData.enableCustomerInfo) {
+      if (checkoutData.customerName && checkoutData.customerEmail && 
+          checkoutData.customerPhone && checkoutData.customerId && checkoutData.customerOrderIp) {
+        customerObj = {
+          name: checkoutData.customerName.trim(),
+          email: checkoutData.customerEmail.trim(),
+          phone: checkoutData.customerPhone.trim(),
+          id: checkoutData.customerId.trim(),
+          order_ip: checkoutData.customerOrderIp.trim()
+        }
+      }
+    }
+    
+    if (checkoutData.goods) {
+      try {
+        goodsObj = JSON.parse(checkoutData.goods)
+      } catch (e) {
+        goodsObj = { error: 'JSON格式错误' }
+      }
+    }
+    
+    // 构建地址信息对象的辅助函数
+    const buildAddressObject = (prefix) => {
+      const obj = {}
+      const fieldMap = {
+        FirstName: 'first_name',
+        LastName: 'last_name',
+        Email: 'email',
+        Phone: 'phone_number',
+        AddressLine1: 'address_line1',
+        Country: 'country',
+        State: 'state',
+        City: 'city',
+        PostalCode: 'postal_code',
+        AreaCode: 'area_code'
+      }
+      
+      for (const [key, snakeKey] of Object.entries(fieldMap)) {
+        const value = checkoutData[`${prefix}${key}`]
+        if (value) obj[snakeKey] = value
+      }
+      
+      if (prefix === 'bill') {
+        if (checkoutData.billDescriptor) obj.descriptor = checkoutData.billDescriptor
+        if (checkoutData.billAddressCollection) obj.billing_address_collection = checkoutData.billAddressCollection
+      }
+      
+      return Object.keys(obj).length > 0 ? obj : null
+    }
+    
+    // 构建请求参数
+    const params = {
+      merchant_id: apiConfig.merchantId || '(未填写)',
+      trans_id: checkoutData.transId || '(未填写)',
+      amount: checkoutData.amount || 0,
+      currency: checkoutData.currency || 'USD',
+      payment_type: checkoutData.paymentType || 'PURCHASE',
+      session_mode: checkoutData.sessionMode || props.defaultSessionMode,
+      description: checkoutData.description || '(未填写)',
+      capture_method: checkoutData.captureMethod || 'AUTOMATIC',
+      expire_time: checkoutData.expireTime ? formatExpireTime(checkoutData.expireTime) : '(未填写)',
+      return_url: checkoutData.returnUrl || '(未填写)',
+      cancel_url: checkoutData.cancelUrl || '(未填写)',
+      goods: goodsObj || '(未填写)'
+    }
+    
+    // 只有当客户信息开关启用时，才添加客户信息字段和 customer 对象
+    if (checkoutData.enableCustomerInfo) {
+      if (customerObj) {
+        params.customer = customerObj
+      }
+    }
+    
+    // 构建账单信息对象（bill）- 只有当开关启用时才构建
+    if (checkoutData.enableBillInfo) {
+      const billObj = buildAddressObject('bill')
+      if (billObj) {
+        params.bill = billObj
+      }
+    }
+    
+    // 构建收货信息对象（shipping）- 只有当开关启用时才构建
+    if (checkoutData.enableShipInfo) {
+      const shipObj = buildAddressObject('ship')
+      if (shipObj) {
+        params.shipping = shipObj
+      }
+    }
+    
+    return params
+  } catch (error) {
+    return { error: `生成JSON时出错: ${error.message}` }
+  }
+}
+
+// 计算生成的请求参数JSON
+const requestParamsJson = computed(() => {
+  const params = buildRequestParams()
+  return formatJson(params)
+})
+
+// 使用 watch 来同步JSON - 当表单数据变化时自动更新
+watch(requestParamsJson, (newValue) => {
+  // 如果用户没有手动编辑JSON，则自动同步更新
+  if (!isManuallyEditingJson.value) {
+    editableJson.value = newValue
+  }
+}, { immediate: true })
+
+// 监听 editableJson 的变化，检测用户是否在手动编辑
+watch(editableJson, (newValue) => {
+  // 如果 editableJson 与 requestParamsJson 不同，说明用户正在手动编辑
+  if (newValue && newValue.trim() !== '' && newValue !== requestParamsJson.value) {
+    isManuallyEditingJson.value = true
+  }
+})
+
+// 切换JSON折叠状态
+const toggleJsonCollapse = () => {
+  isJsonCollapsed.value = !isJsonCollapsed.value
+}
+
+// 重置JSON为当前表单值
+const resetJson = () => {
+  isManuallyEditingJson.value = false
+  editableJson.value = requestParamsJson.value
+}
+
+// 从JSON更新表单
+const updateFormFromJson = () => {
+  try {
+    const jsonText = editableJson.value.trim()
+    if (!jsonText) {
+      alert('JSON内容为空')
+      return
+    }
+    
+    const params = JSON.parse(jsonText)
+    
+    // 更新基本字段
+    if (params.trans_id && params.trans_id !== '(未填写)') {
+      checkoutData.transId = params.trans_id
+    }
+    if (params.amount !== undefined && params.amount !== '(未填写)') {
+      checkoutData.amount = params.amount
+    }
+    if (params.currency && params.currency !== '(未填写)') {
+      checkoutData.currency = params.currency
+    }
+    if (params.payment_type && params.payment_type !== '(未填写)') {
+      checkoutData.paymentType = params.payment_type
+    }
+    if (params.session_mode && params.session_mode !== '(未填写)') {
+      checkoutData.sessionMode = params.session_mode
+    }
+    if (params.description && params.description !== '(未填写)') {
+      checkoutData.description = params.description
+    }
+    if (params.capture_method && params.capture_method !== '(未填写)') {
+      checkoutData.captureMethod = params.capture_method
+    }
+    if (params.expire_time && params.expire_time !== '(未填写)') {
+      checkoutData.expireTime = params.expire_time
+    }
+    if (params.return_url && params.return_url !== '(未填写)') {
+      checkoutData.returnUrl = params.return_url
+    }
+    if (params.cancel_url && params.cancel_url !== '(未填写)') {
+      checkoutData.cancelUrl = params.cancel_url
+    }
+    
+    // 更新商品信息
+    if (params.goods && params.goods !== '(未填写)' && !params.goods.error) {
+      checkoutData.goods = formatJson(params.goods)
+    }
+    
+    // 更新客户信息
+    if (params.customer && !params.customer.error) {
+      checkoutData.enableCustomerInfo = true
+      if (params.customer.name) checkoutData.customerName = params.customer.name
+      if (params.customer.email) checkoutData.customerEmail = params.customer.email
+      if (params.customer.phone) checkoutData.customerPhone = params.customer.phone
+      if (params.customer.id) checkoutData.customerId = params.customer.id
+      if (params.customer.order_ip) checkoutData.customerOrderIp = params.customer.order_ip
+      // customer JSON 会通过 watch 自动更新
+    }
+    
+    // 更新账单信息
+    if (params.bill) {
+      checkoutData.enableBillInfo = true
+      const fieldMap = {
+        first_name: 'FirstName',
+        last_name: 'LastName',
+        email: 'Email',
+        phone_number: 'Phone',
+        address_line1: 'AddressLine1',
+        country: 'Country',
+        state: 'State',
+        city: 'City',
+        postal_code: 'PostalCode',
+        area_code: 'AreaCode'
+      }
+      for (const [snakeKey, key] of Object.entries(fieldMap)) {
+        if (params.bill[snakeKey]) {
+          checkoutData[`bill${key}`] = params.bill[snakeKey]
+        }
+      }
+      if (params.bill.descriptor) checkoutData.billDescriptor = params.bill.descriptor
+      if (params.bill.billing_address_collection) checkoutData.billAddressCollection = params.bill.billing_address_collection
+    }
+    
+    // 更新收货信息
+    if (params.shipping) {
+      checkoutData.enableShipInfo = true
+      const fieldMap = {
+        first_name: 'FirstName',
+        last_name: 'LastName',
+        email: 'Email',
+        phone_number: 'Phone',
+        address_line1: 'AddressLine1',
+        country: 'Country',
+        state: 'State',
+        city: 'City',
+        postal_code: 'PostalCode',
+        area_code: 'AreaCode'
+      }
+      for (const [snakeKey, key] of Object.entries(fieldMap)) {
+        if (params.shipping[snakeKey]) {
+          checkoutData[`ship${key}`] = params.shipping[snakeKey]
+        }
+      }
+    }
+    
+    // 同步更新 editableJson，并清除手动编辑标记
+    isManuallyEditingJson.value = false
+    editableJson.value = requestParamsJson.value
+    alert('表单已更新')
+  } catch (error) {
+    alert(`JSON格式错误: ${error.message}`)
+  }
+}
+
+// 复制JSON到剪贴板
+const copyJson = async () => {
+  try {
+    const textToCopy = editableJson.value || requestParamsJson.value
+    await navigator.clipboard.writeText(textToCopy)
+    alert('JSON已复制到剪贴板')
+  } catch (err) {
+    // 降级方案：使用传统方法
+    const textArea = document.createElement('textarea')
+    const textToCopy = editableJson.value || requestParamsJson.value
+    textArea.value = textToCopy
+    textArea.style.position = 'fixed'
+    textArea.style.opacity = '0'
+    document.body.appendChild(textArea)
+    textArea.select()
+    try {
+      document.execCommand('copy')
+      alert('JSON已复制到剪贴板')
+    } catch (e) {
+      alert('复制失败，请手动复制')
+    }
+    document.body.removeChild(textArea)
+  }
 }
 
 // 创建收银台
@@ -1219,14 +1563,11 @@ const createCheckout = async () => {
       payment_type: checkoutData.paymentType,
       session_mode: checkoutData.sessionMode,
       description: checkoutData.description || `订单 ${checkoutData.transId}`,
-      callback_url: checkoutData.callbackUrl || '',
+      capture_method: checkoutData.captureMethod || 'AUTOMATIC',
+      expire_time: checkoutData.expireTime ? formatExpireTime(checkoutData.expireTime) : '',
       return_url: checkoutData.returnUrl || '',
       cancel_url: checkoutData.cancelUrl || '',
-      goods: goodsObj,
-      timeout: checkoutData.timeout || 1800,
-      product_id: checkoutData.productId || '',
-      product_category: checkoutData.productCategory || '',
-      remark: checkoutData.remark || ''
+      goods: goodsObj
     }
 
     // 只有当客户信息开关启用时，才添加客户信息字段和 customer 对象
@@ -1235,9 +1576,6 @@ const createCheckout = async () => {
       if (customerObj) {
         requestData.customer = customerObj
       }
-      // 添加其他客户信息字段（country、language）
-      if (checkoutData.country) requestData.country = checkoutData.country
-      if (checkoutData.language) requestData.language = checkoutData.language
     }
 
     // 构建地址信息对象的辅助函数
@@ -2009,6 +2347,130 @@ onMounted(() => {
   padding: 0.5rem;
   border-radius: 3px;
   border: 1px solid #bae6fd;
+}
+
+.json-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.json-header label {
+  margin-bottom: 0;
+}
+
+.btn-toggle-collapse {
+  padding: 0.4rem 0.8rem;
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.3s;
+}
+
+.btn-toggle-collapse:hover {
+  background: #e0e0e0;
+  border-color: #bbb;
+}
+
+.btn-toggle-collapse svg {
+  width: 14px;
+  height: 14px;
+}
+
+.json-display-container {
+  position: relative;
+  background: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.json-edit {
+  width: 100%;
+  min-height: 200px;
+  max-height: 400px;
+  padding: 1rem;
+  margin: 0;
+  border: none;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  color: #333;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.json-edit:focus {
+  outline: 2px solid #667eea;
+  outline-offset: -2px;
+  background: #fff;
+}
+
+.json-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: #f0f0f0;
+  border-top: 1px solid #e0e0e0;
+  justify-content: flex-end;
+}
+
+.btn-update,
+.btn-copy,
+.btn-reset {
+  padding: 0.4rem 0.8rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.3s;
+}
+
+.btn-update:hover {
+  background: #5568d3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-copy {
+  background: #17a2b8;
+}
+
+.btn-copy:hover {
+  background: #138496;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+}
+
+.btn-reset {
+  background: #6c757d;
+}
+
+.btn-reset:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+.btn-update svg,
+.btn-copy svg,
+.btn-reset svg {
+  width: 14px;
+  height: 14px;
 }
 
 .checkout-link {

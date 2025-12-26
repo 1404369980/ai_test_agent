@@ -125,6 +125,53 @@
         </div>
 
         <div class="result-section">
+          <div class="form-group">
+            <div class="json-header">
+              <label>生成的请求参数 (Request Parameters)</label>
+              <button @click="toggleJsonCollapse" class="btn-toggle-collapse" :title="isJsonCollapsed ? '展开' : '折叠'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path v-if="isJsonCollapsed" d="M9 18l6-6-6-6"/>
+                  <path v-else d="M18 15l-6-6-6 6"/>
+                </svg>
+                {{ isJsonCollapsed ? '展开' : '折叠' }}
+              </button>
+            </div>
+            <div v-show="!isJsonCollapsed" class="json-display-container">
+              <textarea 
+                v-model="editableJson" 
+                class="json-edit"
+                :placeholder="requestParamsJson"
+                spellcheck="false"
+              ></textarea>
+              <div class="json-actions">
+                <button @click="updateFormFromJson" class="btn-update" title="更新表单">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  更新表单
+                </button>
+                <button @click="copyJson" class="btn-copy" title="复制JSON">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  复制
+                </button>
+                <button @click="resetJson" class="btn-reset" title="重置JSON">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                  </svg>
+                  重置
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
           <h2>测试结果</h2>
           
           <div v-if="!result" class="empty-state">
@@ -146,11 +193,6 @@
               </div>
 
               <div class="result-item">
-                <label>请求参数:</label>
-                <pre class="code-block">{{ formatJson(result.requestData) }}</pre>
-              </div>
-
-              <div class="result-item">
                 <label>响应数据:</label>
                 <pre class="code-block">{{ formatJson(result.responseData) }}</pre>
               </div>
@@ -168,7 +210,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { payKKaApi } from '../services/paykkaApi'
 import { getAllConfigs, getConfigByMerchantId, getDefaultConfig } from '../services/configManager'
 
@@ -227,6 +269,11 @@ const transactionData = reactive({
 
 const result = ref(null)
 
+// JSON展示相关
+const isJsonCollapsed = ref(false)
+const editableJson = ref('')
+const isManuallyEditingJson = ref(false) // 标记用户是否正在手动编辑JSON
+
 // 生成订单号
 const generateOrderNo = () => {
   const timestamp = Date.now()
@@ -238,6 +285,116 @@ const generateOrderNo = () => {
 const formatJson = (obj) => {
   if (!obj) return ''
   return JSON.stringify(obj, null, 2)
+}
+
+// 计算生成的请求参数JSON
+const requestParamsJson = computed(() => {
+  const params = {
+    merchantId: apiConfig.merchantId || '(未填写)',
+    orderNo: transactionData.orderNo || '(未填写，将自动生成)',
+    amount: transactionData.amount || 0,
+    currency: transactionData.currency || 'USD',
+    transactionType: transactionData.transactionType || 'payment',
+    description: transactionData.description || '(未填写)',
+    callbackUrl: transactionData.callbackUrl || '(未填写)',
+    timestamp: Date.now()
+  }
+  return formatJson(params)
+})
+
+// 使用 watch 来同步JSON - 当表单数据变化时自动更新
+watch(requestParamsJson, (newValue) => {
+  // 如果用户没有手动编辑JSON，则自动同步更新
+  if (!isManuallyEditingJson.value) {
+    editableJson.value = newValue
+  }
+}, { immediate: true })
+
+// 监听 editableJson 的变化，检测用户是否在手动编辑
+watch(editableJson, (newValue) => {
+  // 如果 editableJson 与 requestParamsJson 不同，说明用户正在手动编辑
+  if (newValue && newValue.trim() !== '' && newValue !== requestParamsJson.value) {
+    isManuallyEditingJson.value = true
+  }
+})
+
+// 切换JSON折叠状态
+const toggleJsonCollapse = () => {
+  isJsonCollapsed.value = !isJsonCollapsed.value
+}
+
+// 重置JSON为当前表单值
+const resetJson = () => {
+  isManuallyEditingJson.value = false
+  editableJson.value = requestParamsJson.value
+}
+
+// 从JSON更新表单
+const updateFormFromJson = () => {
+  try {
+    const jsonText = editableJson.value.trim()
+    if (!jsonText) {
+      alert('JSON内容为空')
+      return
+    }
+    
+    const params = JSON.parse(jsonText)
+    
+    // 更新表单字段
+    if (params.orderNo && params.orderNo !== '(未填写，将自动生成)') {
+      transactionData.orderNo = params.orderNo
+    }
+    if (params.amount !== undefined && params.amount !== '(未填写)') {
+      transactionData.amount = params.amount
+    }
+    if (params.currency && params.currency !== '(未填写)') {
+      transactionData.currency = params.currency
+    }
+    if (params.transactionType && params.transactionType !== '(未填写)') {
+      transactionData.transactionType = params.transactionType
+    }
+    if (params.description && params.description !== '(未填写)') {
+      transactionData.description = params.description
+    }
+    if (params.callbackUrl && params.callbackUrl !== '(未填写)') {
+      transactionData.callbackUrl = params.callbackUrl
+    }
+    if (params.merchantId && params.merchantId !== '(未填写)') {
+      apiConfig.merchantId = params.merchantId
+    }
+    
+    // 同步更新 editableJson，并清除手动编辑标记
+    isManuallyEditingJson.value = false
+    editableJson.value = requestParamsJson.value
+    alert('表单已更新')
+  } catch (error) {
+    alert(`JSON格式错误: ${error.message}`)
+  }
+}
+
+// 复制JSON到剪贴板
+const copyJson = async () => {
+  try {
+    const textToCopy = editableJson.value || requestParamsJson.value
+    await navigator.clipboard.writeText(textToCopy)
+    alert('JSON已复制到剪贴板')
+  } catch (err) {
+    // 降级方案：使用传统方法
+    const textArea = document.createElement('textarea')
+    const textToCopy = editableJson.value || requestParamsJson.value
+    textArea.value = textToCopy
+    textArea.style.position = 'fixed'
+    textArea.style.opacity = '0'
+    document.body.appendChild(textArea)
+    textArea.select()
+    try {
+      document.execCommand('copy')
+      alert('JSON已复制到剪贴板')
+    } catch (e) {
+      alert('复制失败，请手动复制')
+    }
+    document.body.removeChild(textArea)
+  }
 }
 
 // 重置表单
@@ -624,6 +781,181 @@ code {
   border-radius: 4px;
   font-size: 0.9rem;
   word-break: break-all;
+}
+
+.json-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.json-header label {
+  margin-bottom: 0;
+}
+
+.btn-toggle-collapse {
+  padding: 0.4rem 0.8rem;
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.3s;
+}
+
+.btn-toggle-collapse:hover {
+  background: #e0e0e0;
+  border-color: #bbb;
+}
+
+.btn-toggle-collapse svg {
+  width: 14px;
+  height: 14px;
+}
+
+.json-display-container {
+  position: relative;
+  background: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.json-edit {
+  width: 100%;
+  min-height: 200px;
+  max-height: 400px;
+  padding: 1rem;
+  margin: 0;
+  border: none;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  color: #333;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.json-edit:focus {
+  outline: 2px solid #667eea;
+  outline-offset: -2px;
+  background: #fff;
+}
+
+.json-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: #f0f0f0;
+  border-top: 1px solid #e0e0e0;
+  justify-content: flex-end;
+}
+
+.btn-update,
+.btn-copy,
+.btn-reset {
+  padding: 0.4rem 0.8rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.3s;
+}
+
+.btn-update:hover {
+  background: #5568d3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-copy {
+  background: #17a2b8;
+}
+
+.btn-copy:hover {
+  background: #138496;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+}
+
+.btn-reset {
+  background: #6c757d;
+}
+
+.btn-reset:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+.btn-update svg,
+.btn-copy svg,
+.btn-reset svg {
+  width: 14px;
+  height: 14px;
+}
+
+.json-display-container {
+  position: relative;
+  background: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.json-display {
+  background: #f8f9fa;
+  padding: 1rem;
+  margin: 0;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  color: #333;
+}
+
+.btn-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.3s;
+  z-index: 10;
+}
+
+.btn-copy:hover {
+  background: #5568d3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-copy svg {
+  width: 14px;
+  height: 14px;
 }
 
 @media (max-width: 1024px) {
