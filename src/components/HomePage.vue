@@ -58,26 +58,28 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['navigate'])
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const goToApiTest = () => {
-  emit('navigate', 'api-test')
+  router.push('/api-test')
 }
 
 const goToHostedTest = () => {
-  emit('navigate', 'hosted-test')
+  router.push('/hosted-test')
 }
 
 const goToDropInTest = () => {
-  emit('navigate', 'dropin-test')
+  router.push('/dropin-test')
 }
 
 const goToComponentTest = () => {
-  emit('navigate', 'component-test')
+  router.push('/component-test')
 }
 
 const goToUserConfig = () => {
-  emit('navigate', 'user-config')
+  router.push('/user-config')
 }
 </script>
 

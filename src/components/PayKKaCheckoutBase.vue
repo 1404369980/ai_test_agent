@@ -2,7 +2,7 @@
   <div class="checkout-test">
     <div class="container">
       <div class="header-with-back">
-        <button @click="$emit('back')" class="back-button">← 返回首页</button>
+        <button @click="goBack" class="back-button">← 返回首页</button>
         <h1 class="title">{{ title }}</h1>
       </div>
       
@@ -711,11 +711,19 @@
         </div>
       </div>
     </div>
+    
+    <!-- Toast 提示 -->
+    <Toast />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import Toast from './Toast.vue'
+import { showError, showSuccess, showInfo } from '../utils/toast'
+import { useNavigation } from '../composables/useNavigation'
+import { useMerchantConfig } from '../composables/useMerchantConfig'
 import { payKKaCheckoutApi } from '../services/paykkaCheckoutApi'
 import { 
   generateRandomIP,
@@ -731,7 +739,7 @@ import {
   generateRandomAreaCode as generateRandomAreaCodeUtil
 } from '../services/utils'
 // 签名相关功能已由 payKKaCheckoutApi 内部管理，无需在此处导入
-import { getAllConfigs, getConfigByMerchantId, getDefaultConfig } from '../services/configManager'
+// 商户配置管理已移至 useMerchantConfig composable
 
 const props = defineProps({
   title: {
@@ -749,63 +757,14 @@ const props = defineProps({
   }
 })
 
-defineEmits(['back'])
+const { goHome: goBack } = useNavigation()
 
 const loading = ref(false)
-
-// 商户配置相关
-const merchantConfigs = ref([])
-const selectedMerchantId = ref('')
 
 // 私钥展开/收起状态
 const showPrivateKeyFull = ref(false)
 
-// 加载商户配置列表
-const loadMerchantConfigs = () => {
-  merchantConfigs.value = getAllConfigs()
-  // 如果有配置，优先选择默认配置，否则选择第一个
-  if (merchantConfigs.value.length > 0 && !selectedMerchantId.value) {
-    const defaultConfig = getDefaultConfig()
-    if (defaultConfig) {
-      selectedMerchantId.value = defaultConfig.merchantId
-    } else {
-      selectedMerchantId.value = merchantConfigs.value[0].merchantId
-    }
-    onMerchantChange()
-  }
-}
-
-// 清空API配置
-const clearApiConfig = () => {
-  apiConfig.baseUrl = ''
-  apiConfig.merchantId = ''
-  apiConfig.appId = ''
-  apiConfig.privateKey = ''
-}
-
-// 填充API配置
-const fillApiConfig = (config) => {
-  apiConfig.baseUrl = config.baseUrl || 'https://openapi-dev.paykka.com'
-  apiConfig.merchantId = config.merchantId
-  apiConfig.appId = config.appId
-  apiConfig.privateKey = config.privateKey
-}
-
-// 商户选择变化时，自动填充配置
-const onMerchantChange = () => {
-  if (!selectedMerchantId.value) {
-    clearApiConfig()
-    return
-  }
-  
-  const config = getConfigByMerchantId(selectedMerchantId.value)
-  if (config) {
-    fillApiConfig(config)
-  } else {
-    clearApiConfig()
-  }
-}
-
+// API配置 - 必须在 useMerchantConfig 之前定义
 const apiConfig = reactive({
   baseUrl: '', // 从商户配置中选择后自动填充
   merchantId: '', // 从商户配置中选择后自动填充
@@ -813,6 +772,64 @@ const apiConfig = reactive({
   appId: '' // 从商户配置中选择后自动填充
   // timestamp, nonce, signAlg, sign 由签名方法自动管理，无需在配置中存储
 })
+
+// 使用商户配置 composable
+const { merchantConfigs, selectedMerchantId, onMerchantChange, loadMerchantConfigs } = useMerchantConfig(apiConfig)
+
+// 清空API配置（保留用于其他地方）
+const clearApiConfig = () => {
+  apiConfig.baseUrl = ''
+  apiConfig.merchantId = ''
+  apiConfig.appId = ''
+  apiConfig.privateKey = ''
+}
+
+// 填充API配置（保留用于其他地方）
+const fillApiConfig = (config) => {
+  if (config) {
+    apiConfig.baseUrl = config.baseUrl || 'https://openapi-dev.paykka.com'
+    apiConfig.merchantId = config.merchantId
+    apiConfig.appId = config.appId
+    apiConfig.privateKey = config.privateKey
+  }
+}
+
+const router = useRouter()
+
+// 获取当前页面的基础URL
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol
+    const host = window.location.host
+    return `${protocol}//${host}`
+  }
+  return 'http://localhost:5173' // 开发环境默认值
+}
+
+// 生成默认成功返回地址
+const getDefaultReturnUrl = () => {
+  return `${getBaseUrl()}/payment/success`
+}
+
+// 生成默认失败返回地址
+const getDefaultCancelUrl = () => {
+  return `${getBaseUrl()}/payment/cancel`
+}
+
+// 生成默认过期时间（当前时间之后半小时）
+const getDefaultExpireTime = () => {
+  const now = new Date()
+  const expireTime = new Date(now.getTime() + 30 * 60 * 1000) // 加30分钟
+  
+  const year = expireTime.getFullYear()
+  const month = String(expireTime.getMonth() + 1).padStart(2, '0')
+  const day = String(expireTime.getDate()).padStart(2, '0')
+  const hours = String(expireTime.getHours()).padStart(2, '0')
+  const minutes = String(expireTime.getMinutes()).padStart(2, '0')
+  
+  // datetime-local 格式：YYYY-MM-DDTHH:mm
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
 
 const checkoutData = reactive({
   transId: '',
@@ -822,9 +839,9 @@ const checkoutData = reactive({
   sessionMode: props.defaultSessionMode,
   description: '',
   captureMethod: 'AUTOMATIC',
-  expireTime: '',
-  returnUrl: '',
-  cancelUrl: '',
+  expireTime: getDefaultExpireTime(),
+  returnUrl: getDefaultReturnUrl(),
+  cancelUrl: getDefaultCancelUrl(),
   // 开关控制
   enableCustomerInfo: true,
   enableBillInfo: false,
@@ -1068,19 +1085,11 @@ const generateAllRandom = () => {
   
   // timestamp 和 nonce 由签名方法自动管理，无需手动生成
   
-  // 生成过期时间（未来7天内的随机时间）
-  const now = new Date()
-  const futureDate = new Date(now.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000)
-  const year = futureDate.getFullYear()
-  const month = String(futureDate.getMonth() + 1).padStart(2, '0')
-  const day = String(futureDate.getDate()).padStart(2, '0')
-  const hours = String(futureDate.getHours()).padStart(2, '0')
-  const minutes = String(futureDate.getMinutes()).padStart(2, '0')
-  const seconds = String(futureDate.getSeconds()).padStart(2, '0')
-  checkoutData.expireTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+0800`
+  // 保持过期时间为默认值（当前时间之后半小时），不随机生成
+  checkoutData.expireTime = getDefaultExpireTime()
   
-  checkoutData.returnUrl = 'https://example.com/success'
-  checkoutData.cancelUrl = 'https://example.com/cancel'
+  checkoutData.returnUrl = getDefaultReturnUrl()
+  checkoutData.cancelUrl = getDefaultCancelUrl()
 }
 
 // 格式化JSON
@@ -1131,9 +1140,9 @@ const resetForm = () => {
   checkoutData.sessionMode = props.defaultSessionMode
   checkoutData.description = ''
   checkoutData.captureMethod = 'AUTOMATIC'
-  checkoutData.expireTime = ''
-  checkoutData.returnUrl = ''
-  checkoutData.cancelUrl = ''
+  checkoutData.expireTime = getDefaultExpireTime()
+  checkoutData.returnUrl = getDefaultReturnUrl()
+  checkoutData.cancelUrl = getDefaultCancelUrl()
   // 重置开关
   checkoutData.enableCustomerInfo = true
   checkoutData.enableBillInfo = false
@@ -1181,12 +1190,12 @@ const resetForm = () => {
 // 验证商户配置
 const validateMerchantConfig = () => {
   if (!selectedMerchantId.value) {
-    alert('请先选择商户配置')
+    showError('请先选择商户配置')
     return false
   }
   
   if (!apiConfig.baseUrl || !apiConfig.merchantId || !apiConfig.privateKey || !apiConfig.appId) {
-    alert('商户配置不完整，请检查商户配置或重新选择')
+    showError('商户配置不完整，请检查商户配置或重新选择')
     return false
   }
   return true
@@ -1195,7 +1204,7 @@ const validateMerchantConfig = () => {
 // 验证收银台数据
 const validateCheckoutData = () => {
   if (!checkoutData.amount || checkoutData.amount <= 0) {
-    alert('请输入有效的交易金额')
+    showError('请输入有效的交易金额')
     return false
   }
 
@@ -1211,23 +1220,23 @@ const validateJsonData = () => {
   if (checkoutData.enableCustomerInfo) {
     // 验证必填字段
     if (!checkoutData.customerName || checkoutData.customerName.trim() === '') {
-      alert('客户姓名 (Name) 不能为空')
+      showError('客户姓名 (Name) 不能为空')
       return null
     }
     if (!checkoutData.customerEmail || checkoutData.customerEmail.trim() === '') {
-      alert('客户邮箱 (Email) 不能为空')
+      showError('客户邮箱 (Email) 不能为空')
       return null
     }
     if (!checkoutData.customerPhone || checkoutData.customerPhone.trim() === '') {
-      alert('客户电话 (Phone) 不能为空')
+      showError('客户电话 (Phone) 不能为空')
       return null
     }
     if (!checkoutData.customerId || checkoutData.customerId.trim() === '') {
-      alert('客户ID (ID) 不能为空')
+      showError('客户ID (ID) 不能为空')
       return null
     }
     if (!checkoutData.customerOrderIp || checkoutData.customerOrderIp.trim() === '') {
-      alert('订单IP (Order IP) 不能为空')
+      showError('订单IP (Order IP) 不能为空')
       return null
     }
     
@@ -1245,17 +1254,17 @@ const validateJsonData = () => {
     goodsObj = JSON.parse(checkoutData.goods)
     // 验证 goods[0].link 不能为null
     if (!Array.isArray(goodsObj) || goodsObj.length === 0) {
-      alert('商品信息 (Goods) 必须是一个非空数组')
+      showError('商品信息 (Goods) 必须是一个非空数组')
       return null
     }
     for (let i = 0; i < goodsObj.length; i++) {
       if (goodsObj[i].link === null || goodsObj[i].link === undefined) {
-        alert(`商品信息 (Goods) 中第 ${i + 1} 个商品的 link 字段不能为null`)
+        showError(`商品信息 (Goods) 中第 ${i + 1} 个商品的 link 字段不能为null`)
         return null
       }
     }
   } catch (e) {
-    alert('商品信息 (Goods) 格式错误，请输入有效的JSON')
+    showError('商品信息 (Goods) 格式错误，请输入有效的JSON')
     return null
   }
   
@@ -1403,7 +1412,7 @@ const updateFormFromJson = () => {
   try {
     const jsonText = editableJson.value.trim()
     if (!jsonText) {
-      alert('JSON内容为空')
+      showError('JSON内容为空')
       return
     }
     
@@ -1506,9 +1515,9 @@ const updateFormFromJson = () => {
     // 同步更新 editableJson，并清除手动编辑标记
     isManuallyEditingJson.value = false
     editableJson.value = requestParamsJson.value
-    alert('表单已更新')
+    showSuccess('表单已更新')
   } catch (error) {
-    alert(`JSON格式错误: ${error.message}`)
+    showError(`JSON格式错误: ${error.message}`)
   }
 }
 
@@ -1517,7 +1526,7 @@ const copyJson = async () => {
   try {
     const textToCopy = editableJson.value || requestParamsJson.value
     await navigator.clipboard.writeText(textToCopy)
-    alert('JSON已复制到剪贴板')
+    showSuccess('JSON已复制到剪贴板')
   } catch (err) {
     // 降级方案：使用传统方法
     const textArea = document.createElement('textarea')
@@ -1529,9 +1538,9 @@ const copyJson = async () => {
     textArea.select()
     try {
       document.execCommand('copy')
-      alert('JSON已复制到剪贴板')
+      showSuccess('JSON已复制到剪贴板')
     } catch (e) {
-      alert('复制失败，请手动复制')
+      showError('复制失败，请手动复制')
     }
     document.body.removeChild(textArea)
   }
@@ -1629,7 +1638,7 @@ const createCheckout = async () => {
 
     // 验证必填的请求头参数
     if (!apiConfig.appId) {
-      alert('请填写x-paykka-appid')
+      showError('请填写x-paykka-appid')
       loading.value = false
       return
     }
@@ -1686,6 +1695,7 @@ const createCheckout = async () => {
   }
 }
 
+// 组件挂载时加载商户配置
 // 组件挂载时加载商户配置
 onMounted(() => {
   loadMerchantConfigs()

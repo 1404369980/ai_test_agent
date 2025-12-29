@@ -2,7 +2,7 @@
   <div class="paykka-test">
     <div class="container">
       <div class="header-with-back">
-        <button @click="$emit('back')" class="back-button">← 返回首页</button>
+        <button @click="goBack" class="back-button">← 返回首页</button>
         <h1 class="title">PayKKa 交易接口测试</h1>
       </div>
       
@@ -206,56 +206,42 @@
         </div>
       </div>
     </div>
+    
+    <!-- Toast 提示 -->
+    <Toast />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
+import Toast from './Toast.vue'
 import { payKKaApi } from '../services/paykkaApi'
-import { getAllConfigs, getConfigByMerchantId, getDefaultConfig } from '../services/configManager'
+import { showError, showSuccess } from '../utils/toast'
+import { useNavigation } from '../composables/useNavigation'
+import { useMerchantConfig } from '../composables/useMerchantConfig'
 
-defineEmits(['back'])
+const { goHome: goBack } = useNavigation()
 
 const loading = ref(false)
 
-// 商户配置相关
-const merchantConfigs = ref([])
-const selectedMerchantId = ref('')
-
-// 加载商户配置列表
-const loadMerchantConfigs = () => {
-  merchantConfigs.value = getAllConfigs()
-  // 如果有配置，优先选择默认配置，否则选择第一个
-  if (merchantConfigs.value.length > 0 && !selectedMerchantId.value) {
-    const defaultConfig = getDefaultConfig()
-    if (defaultConfig) {
-      selectedMerchantId.value = defaultConfig.merchantId
-    } else {
-      selectedMerchantId.value = merchantConfigs.value[0].merchantId
-    }
-    onMerchantChange()
-  }
-}
-
-// 商户选择变化时，自动填充配置
-const onMerchantChange = () => {
-  if (!selectedMerchantId.value) {
-    return
-  }
-  
-  const config = getConfigByMerchantId(selectedMerchantId.value)
-  if (config) {
-    apiConfig.baseUrl = config.baseUrl || 'https://api.paykka.com'
-    apiConfig.merchantId = config.merchantId
-    // PayKKaApiTest使用apiKey，这里用privateKey填充
-    apiConfig.apiKey = config.privateKey
-  }
-}
-
+// API配置
 const apiConfig = reactive({
   baseUrl: 'https://api.paykka.com',
   merchantId: '',
   apiKey: ''
+})
+
+// 使用商户配置 composable
+const { merchantConfigs, selectedMerchantId, onMerchantChange, loadMerchantConfigs } = useMerchantConfig(apiConfig, { autoLoad: false })
+
+// 商户选择变化时，更新 apiKey
+watch(selectedMerchantId, () => {
+  if (selectedMerchantId.value) {
+    const config = merchantConfigs.value.find(c => c.merchantId === selectedMerchantId.value)
+    if (config) {
+      apiConfig.apiKey = config.privateKey // PayKKaApiTest使用apiKey，这里用privateKey填充
+    }
+  }
 })
 
 const transactionData = reactive({
@@ -334,7 +320,7 @@ const updateFormFromJson = () => {
   try {
     const jsonText = editableJson.value.trim()
     if (!jsonText) {
-      alert('JSON内容为空')
+      showError('JSON内容为空')
       return
     }
     
@@ -366,9 +352,9 @@ const updateFormFromJson = () => {
     // 同步更新 editableJson，并清除手动编辑标记
     isManuallyEditingJson.value = false
     editableJson.value = requestParamsJson.value
-    alert('表单已更新')
+    showSuccess('表单已更新')
   } catch (error) {
-    alert(`JSON格式错误: ${error.message}`)
+    showError(`JSON格式错误: ${error.message}`)
   }
 }
 
@@ -377,7 +363,7 @@ const copyJson = async () => {
   try {
     const textToCopy = editableJson.value || requestParamsJson.value
     await navigator.clipboard.writeText(textToCopy)
-    alert('JSON已复制到剪贴板')
+    showSuccess('JSON已复制到剪贴板')
   } catch (err) {
     // 降级方案：使用传统方法
     const textArea = document.createElement('textarea')
@@ -389,9 +375,9 @@ const copyJson = async () => {
     textArea.select()
     try {
       document.execCommand('copy')
-      alert('JSON已复制到剪贴板')
+      showSuccess('JSON已复制到剪贴板')
     } catch (e) {
-      alert('复制失败，请手动复制')
+      showError('复制失败，请手动复制')
     }
     document.body.removeChild(textArea)
   }
@@ -438,7 +424,7 @@ const testConnection = async () => {
 const submitTransaction = async () => {
   // 验证必填字段
   if (!apiConfig.merchantId || !apiConfig.apiKey) {
-    alert('请填写商户ID和API密钥')
+    showError('请填写商户ID和API密钥')
     return
   }
 
@@ -447,7 +433,7 @@ const submitTransaction = async () => {
   }
 
   if (!transactionData.amount || transactionData.amount <= 0) {
-    alert('请输入有效的交易金额')
+    showError('请输入有效的交易金额')
     return
   }
 
@@ -493,6 +479,7 @@ const submitTransaction = async () => {
   }
 }
 
+// 组件挂载时加载商户配置
 // 组件挂载时加载商户配置
 onMounted(() => {
   loadMerchantConfigs()

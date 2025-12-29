@@ -2,7 +2,7 @@
   <div class="user-config">
     <div class="container">
       <div class="header-with-back">
-        <button @click="$emit('back')" class="back-button">← 返回首页</button>
+        <button @click="goBack" class="back-button">← 返回首页</button>
         <h1 class="title">商户配置管理</h1>
       </div>
       
@@ -143,14 +143,20 @@
         </div>
       </div>
     </div>
+    
+    <!-- Toast 提示 -->
+    <Toast />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import Toast from './Toast.vue'
 import { getAllConfigs, saveAllConfigs, deleteConfig as deleteConfigUtil, setDefaultConfig as setDefaultConfigUtil } from '../services/configManager'
+import { showError, showSuccess } from '../utils/toast'
+import { useNavigation } from '../composables/useNavigation'
 
-defineEmits(['back'])
+const { goHome: goBack } = useNavigation()
 
 const configs = ref([])
 const showAddForm = ref(false)
@@ -180,7 +186,7 @@ const loadConfigs = () => {
 // 保存配置
 const saveConfig = () => {
   if (!isFormValid.value) {
-    alert('请填写所有必填字段')
+    showError('请填写所有必填字段')
     return
   }
   
@@ -221,7 +227,7 @@ const saveConfig = () => {
     if (oldMerchantId !== newMerchantId) {
       // 检查新商户ID是否已存在（排除当前正在编辑的配置）
       if (configs.value.some((c, idx) => idx !== editingIndex.value && c.merchantId === newMerchantId)) {
-        alert('该商户ID已存在，请使用其他商户ID')
+        showError('该商户ID已存在，请使用其他商户ID')
         return
       }
       
@@ -234,7 +240,7 @@ const saveConfig = () => {
   } else {
     // 检查是否已存在相同商户ID
     if (configs.value.some(c => c.merchantId === config.merchantId)) {
-      alert('该商户ID已存在，请使用编辑功能修改')
+      showError('该商户ID已存在，请使用编辑功能修改')
       return
     }
     // 添加新配置
@@ -242,11 +248,11 @@ const saveConfig = () => {
   }
   
   if (saveAllConfigs(configs.value)) {
-    alert('保存成功')
+    showSuccess('保存成功')
     cancelForm()
     loadConfigs()
   } else {
-    alert('保存失败，请重试')
+    showError('保存失败，请重试')
   }
 }
 
@@ -268,9 +274,9 @@ const setAsDefault = (index) => {
   const merchantId = configs.value[index].merchantId
   if (setDefaultConfigUtil(merchantId)) {
     loadConfigs()
-    alert('已设置为默认配置')
+    showSuccess('已设置为默认配置')
   } else {
-    alert('设置失败，请重试')
+    showError('设置失败，请重试')
   }
 }
 
@@ -280,9 +286,9 @@ const deleteConfig = (index) => {
     const merchantId = configs.value[index].merchantId
     if (deleteConfigUtil(merchantId)) {
       loadConfigs()
-      alert('删除成功')
+      showSuccess('删除成功')
     } else {
-      alert('删除失败，请重试')
+      showError('删除失败，请重试')
     }
   }
 }

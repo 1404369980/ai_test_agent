@@ -2,7 +2,7 @@
   <div class="paykka-test">
     <div class="container">
       <div class="header-with-back">
-        <button @click="$emit('back')" class="back-button">← 返回首页</button>
+        <button @click="goBack" class="back-button">← 返回首页</button>
         <h1 class="title">PayKKa 交易接口测试</h1>
       </div>
       
@@ -164,15 +164,21 @@
         </div>
       </div>
     </div>
+    
+    <!-- Toast 提示 -->
+    <Toast />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import Toast from './Toast.vue'
 import { payKKaApi } from '../services/paykkaApi'
 import { getAllConfigs, getConfigByMerchantId } from '../services/configManager'
+import { showError } from '../utils/toast'
+import { useNavigation } from '../composables/useNavigation'
 
-defineEmits(['back'])
+const { goHome: goBack } = useNavigation()
 
 const loading = ref(false)
 
@@ -276,7 +282,7 @@ const testConnection = async () => {
 const submitTransaction = async () => {
   // 验证必填字段
   if (!apiConfig.merchantId || !apiConfig.apiKey) {
-    alert('请填写商户ID和API密钥')
+    showError('请填写商户ID和API密钥')
     return
   }
 
@@ -285,7 +291,7 @@ const submitTransaction = async () => {
   }
 
   if (!transactionData.amount || transactionData.amount <= 0) {
-    alert('请输入有效的交易金额')
+    showError('请输入有效的交易金额')
     return
   }
 
