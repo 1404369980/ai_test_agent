@@ -844,8 +844,8 @@ const checkoutData = reactive({
   cancelUrl: getDefaultCancelUrl(),
   // 开关控制
   enableCustomerInfo: true,
-  enableBillInfo: false,
-  enableShipInfo: false,
+  enableBillInfo: true,
+  enableShipInfo: true,
   customerName: '',
   customerEmail: '',
   customerPhone: '',
@@ -1145,8 +1145,8 @@ const resetForm = () => {
   checkoutData.cancelUrl = getDefaultCancelUrl()
   // 重置开关
   checkoutData.enableCustomerInfo = true
-  checkoutData.enableBillInfo = false
-  checkoutData.enableShipInfo = false
+  checkoutData.enableBillInfo = true
+  checkoutData.enableShipInfo = true
   checkoutData.customerName = ''
   checkoutData.customerEmail = ''
   checkoutData.customerPhone = ''
