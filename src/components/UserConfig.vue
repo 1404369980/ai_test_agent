@@ -152,100 +152,213 @@
           </div>
         </div>
         
-        <div v-if="showAddForm || editingIndex !== null" class="form-section">
-          <h2>{{ editingIndex !== null ? '编辑商户配置' : '添加商户配置' }}</h2>
-          
-          <div class="form-group">
-            <label>配置名称 <span class="optional">(可选)</span></label>
-            <input 
-              v-model="formData.name" 
-              type="text" 
-              placeholder="例如: 测试商户1"
-              class="input-field"
-            />
-            <small class="field-desc">用于标识此配置的友好名称</small>
+        <!-- 弹窗遮罩层 -->
+        <div v-if="showAddForm || editingIndex !== null" class="modal-overlay" @click="cancelForm">
+          <div class="modal-content" @click.stop>
+            <div class="modal-header">
+              <h2>{{ editingIndex !== null ? '编辑商户配置' : '添加商户配置' }}</h2>
+              <button @click="cancelForm" class="modal-close" title="关闭">×</button>
+            </div>
+            
+            <div class="modal-body">
+              <div class="form-group">
+                <label>配置名称 <span class="optional">(可选)</span></label>
+                <input 
+                  v-model="formData.name" 
+                  type="text" 
+                  placeholder="例如: 测试商户1"
+                  class="input-field"
+                />
+                <small class="field-desc">用于标识此配置的友好名称</small>
+              </div>
+              
+              <div class="form-group">
+                <label>API 地址 <span class="required">*</span></label>
+                <input 
+                  v-model="formData.baseUrl" 
+                  type="text" 
+                  list="api-url-list"
+                  placeholder="选择或输入API地址"
+                  class="input-field"
+                />
+                <datalist id="api-url-list">
+                  <option value="https://openapi.eu.paykka.com">openapi.eu.paykka.com</option>
+                  <option value="https://openapi.paykka.com">openapi.paykka.com</option>
+                  <option value="https://openapi-sandbox.paykka.com">openapi-sandbox.paykka.com</option>
+                  <option value="https://api-sandbox.paykka.com">api-sandbox.paykka.com</option>
+                  <option value="https://openapi-dev.paykka.com">openapi-dev.paykka.com</option>
+                  <option value="https://openapi-fat.paykka.com">openapi-fat.paykka.com</option>
+                  <option value="http://localhost:8080">localhost:8080</option>
+                </datalist>
+                <small class="field-desc">API服务器地址</small>
+              </div>
+              
+              <div class="form-group">
+                <label>商户ID (Merchant ID) <span class="required">*</span></label>
+                <input 
+                  v-model="formData.merchantId" 
+                  type="text" 
+                  placeholder="请输入商户ID"
+                  class="input-field"
+                />
+                <small class="field-desc">商户唯一标识</small>
+              </div>
+              
+              <div class="form-group">
+                <label>x-paykka-appid <span class="required">*</span></label>
+                <input 
+                  v-model="formData.appId" 
+                  type="text" 
+                  placeholder="请输入x-paykka-appid"
+                  class="input-field"
+                />
+                <small class="field-desc">调用方唯一标识</small>
+              </div>
+              
+              <div class="form-group">
+                <label>私钥 (Private Key) <span class="required">*</span></label>
+                <textarea 
+                  v-model="formData.privateKey" 
+                  placeholder="请输入RSA私钥（Base64格式）"
+                  class="textarea-field"
+                  rows="4"
+                ></textarea>
+                <small class="field-desc">RSA私钥，用于签名生成</small>
+              </div>
+              
+              <div class="form-group">
+                <label>Client Key</label>
+                <input 
+                  type="text" 
+                  v-model="formData.clientKey" 
+                  placeholder="请输入 Client Key（可选，用于 DropIn 支付）"
+                  class="input-field"
+                />
+                <small class="field-desc">Client Key，用于 DropIn 支付组件初始化（可选）</small>
+              </div>
+              
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    v-model="formData.isDefault"
+                    class="checkbox-input"
+                  />
+                  <span>设为默认配置</span>
+                </label>
+                <small class="field-desc">默认配置将在测试页面中自动选中</small>
+              </div>
+              
+              <div class="button-group">
+                <button @click="saveConfig" class="btn-primary" :disabled="!isFormValid">保存</button>
+                <button @click="cancelForm" class="btn-secondary">取消</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 弹窗遮罩层 -->
+      <div v-if="showAddForm || editingIndex !== null" class="modal-overlay" @click="cancelForm">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h2>{{ editingIndex !== null ? '编辑商户配置' : '添加商户配置' }}</h2>
+            <button @click="cancelForm" class="modal-close" title="关闭">×</button>
           </div>
           
-          <div class="form-group">
-            <label>API 地址 <span class="required">*</span></label>
-            <input 
-              v-model="formData.baseUrl" 
-              type="text" 
-              list="api-url-list"
-              placeholder="选择或输入API地址"
-              class="input-field"
-            />
-            <datalist id="api-url-list">
-              <option value="https://openapi.eu.paykka.com">openapi.eu.paykka.com</option>
-              <option value="https://openapi.paykka.com">openapi.paykka.com</option>
-              <option value="https://openapi-sandbox.paykka.com">openapi-sandbox.paykka.com</option>
-              <option value="https://api-sandbox.paykka.com">api-sandbox.paykka.com</option>
-              <option value="https://openapi-dev.paykka.com">openapi-dev.paykka.com</option>
-              <option value="https://openapi-fat.paykka.com">openapi-fat.paykka.com</option>
-              <option value="http://localhost:8080">localhost:8080</option>
-            </datalist>
-            <small class="field-desc">API服务器地址</small>
-          </div>
-          
-          <div class="form-group">
-            <label>商户ID (Merchant ID) <span class="required">*</span></label>
-            <input 
-              v-model="formData.merchantId" 
-              type="text" 
-              placeholder="请输入商户ID"
-              class="input-field"
-            />
-            <small class="field-desc">商户唯一标识</small>
-          </div>
-          
-          <div class="form-group">
-            <label>x-paykka-appid <span class="required">*</span></label>
-            <input 
-              v-model="formData.appId" 
-              type="text" 
-              placeholder="请输入x-paykka-appid"
-              class="input-field"
-            />
-            <small class="field-desc">调用方唯一标识</small>
-          </div>
-          
-          <div class="form-group">
-            <label>私钥 (Private Key) <span class="required">*</span></label>
-            <textarea 
-              v-model="formData.privateKey" 
-              placeholder="请输入RSA私钥（Base64格式）"
-              class="textarea-field"
-              rows="4"
-            ></textarea>
-            <small class="field-desc">RSA私钥，用于签名生成</small>
-          </div>
-          
-          <div class="form-group">
-            <label>Client Key</label>
-            <input 
-              type="text" 
-              v-model="formData.clientKey" 
-              placeholder="请输入 Client Key（可选，用于 DropIn 支付）"
-              class="input-field"
-            />
-            <small class="field-desc">Client Key，用于 DropIn 支付组件初始化（可选）</small>
-          </div>
-          
-          <div class="form-group">
-            <label class="checkbox-label">
+          <div class="modal-body">
+            <div class="form-group">
+              <label>配置名称 <span class="optional">(可选)</span></label>
               <input 
-                type="checkbox" 
-                v-model="formData.isDefault"
-                class="checkbox-input"
+                v-model="formData.name" 
+                type="text" 
+                placeholder="例如: 测试商户1"
+                class="input-field"
               />
-              <span>设为默认配置</span>
-            </label>
-            <small class="field-desc">默认配置将在测试页面中自动选中</small>
-          </div>
-          
-          <div class="button-group">
-            <button @click="saveConfig" class="btn-primary" :disabled="!isFormValid">保存</button>
-            <button @click="cancelForm" class="btn-secondary">取消</button>
+              <small class="field-desc">用于标识此配置的友好名称</small>
+            </div>
+            
+            <div class="form-group">
+              <label>API 地址 <span class="required">*</span></label>
+              <input 
+                v-model="formData.baseUrl" 
+                type="text" 
+                list="api-url-list"
+                placeholder="选择或输入API地址"
+                class="input-field"
+              />
+              <datalist id="api-url-list">
+                <option value="https://openapi.eu.paykka.com">openapi.eu.paykka.com</option>
+                <option value="https://openapi.paykka.com">openapi.paykka.com</option>
+                <option value="https://openapi-sandbox.paykka.com">openapi-sandbox.paykka.com</option>
+                <option value="https://api-sandbox.paykka.com">api-sandbox.paykka.com</option>
+                <option value="https://openapi-dev.paykka.com">openapi-dev.paykka.com</option>
+                <option value="https://openapi-fat.paykka.com">openapi-fat.paykka.com</option>
+                <option value="http://localhost:8080">localhost:8080</option>
+              </datalist>
+              <small class="field-desc">API服务器地址</small>
+            </div>
+            
+            <div class="form-group">
+              <label>商户ID (Merchant ID) <span class="required">*</span></label>
+              <input 
+                v-model="formData.merchantId" 
+                type="text" 
+                placeholder="请输入商户ID"
+                class="input-field"
+              />
+              <small class="field-desc">商户唯一标识</small>
+            </div>
+            
+            <div class="form-group">
+              <label>x-paykka-appid <span class="required">*</span></label>
+              <input 
+                v-model="formData.appId" 
+                type="text" 
+                placeholder="请输入x-paykka-appid"
+                class="input-field"
+              />
+              <small class="field-desc">调用方唯一标识</small>
+            </div>
+            
+            <div class="form-group">
+              <label>私钥 (Private Key) <span class="required">*</span></label>
+              <textarea 
+                v-model="formData.privateKey" 
+                placeholder="请输入RSA私钥（Base64格式）"
+                class="textarea-field"
+                rows="4"
+              ></textarea>
+              <small class="field-desc">RSA私钥，用于签名生成</small>
+            </div>
+            
+            <div class="form-group">
+              <label>Client Key</label>
+              <input 
+                type="text" 
+                v-model="formData.clientKey" 
+                placeholder="请输入 Client Key（可选，用于 DropIn 支付）"
+                class="input-field"
+              />
+              <small class="field-desc">Client Key，用于 DropIn 支付组件初始化（可选）</small>
+            </div>
+            
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  v-model="formData.isDefault"
+                  class="checkbox-input"
+                />
+                <span>设为默认配置</span>
+              </label>
+              <small class="field-desc">默认配置将在测试页面中自动选中</small>
+            </div>
+            
+            <div class="button-group">
+              <button @click="saveConfig" class="btn-primary" :disabled="!isFormValid">保存</button>
+              <button @click="cancelForm" class="btn-secondary">取消</button>
+            </div>
           </div>
         </div>
       </div>
@@ -995,6 +1108,99 @@ onMounted(() => {
 .config-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+/* 弹窗样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+  position: relative;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 2px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+  border-radius: 12px 12px 0 0;
+}
+
+.modal-header h2 {
+  font-size: 1.5rem;
+  color: #333;
+  margin: 0;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.modal-body {
+  padding: 2rem;
 }
 
 .form-section {
