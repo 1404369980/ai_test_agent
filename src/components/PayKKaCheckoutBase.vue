@@ -702,6 +702,22 @@
                 <small class="field-desc">点击链接在新页面打开收银台</small>
               </div>
 
+              <!-- DropIn 支付页面跳转按钮 -->
+              <div 
+                v-if="result.status === 'success' && 
+                      result.responseData && 
+                      result.responseData.data && 
+                      result.responseData.data.session_id && 
+                      (result.responseData.data.session_mode === 'DROP_IN' || checkoutData.sessionMode === 'DROP_IN')" 
+                class="result-item success dropin-payment-action"
+              >
+                <label>DropIn 支付组件:</label>
+                <button @click="openDropInPayment" class="btn-dropin-payment">
+                  🎨 打开 DropIn 支付页面
+                </button>
+                <small class="field-desc">使用 PayKKa DropIn 组件进行支付</small>
+              </div>
+
               <div v-if="result.error" class="result-item error">
                 <label>错误信息:</label>
                 <pre class="code-block error-text">{{ result.error }}</pre>
@@ -795,6 +811,42 @@ const fillApiConfig = (config) => {
 }
 
 const router = useRouter()
+
+// 打开 DropIn 支付页面
+const openDropInPayment = () => {
+  const responseData = result.value?.responseData
+  console.log('准备打开 DropIn 支付页面，响应数据:', responseData)
+  
+  if (responseData && responseData.data && responseData.data.session_id) {
+    // 构建完整的传递数据，包含响应数据和配置信息
+    const paymentData = {
+      // 完整的 API 响应数据
+      responseData: responseData,
+      // API 配置信息
+      apiConfig: {
+        baseUrl: apiConfig.baseUrl,
+        merchantId: apiConfig.merchantId,
+        appId: apiConfig.appId
+      },
+      // 时间戳
+      timestamp: new Date().toISOString()
+    }
+    
+    // 保存完整的响应数据到 localStorage
+    localStorage.setItem('paykka_dropin_session', JSON.stringify(paymentData))
+    
+    // 跳转到 DropIn 支付页面，传递响应数据
+    router.push({
+      path: '/dropin-payment',
+      query: {
+        responseData: encodeURIComponent(JSON.stringify(paymentData))
+      }
+    })
+  } else {
+    console.error('响应数据不完整:', responseData)
+    showError('未找到支付会话数据，请先创建支付会话')
+  }
+}
 
 // 获取当前页面的基础URL
 const getBaseUrl = () => {
@@ -2519,6 +2571,47 @@ onMounted(() => {
   background: #667eea;
   color: white;
 }
+
+.dropin-payment-action {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+}
+
+.dropin-payment-action label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.btn-dropin-payment {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-dropin-payment:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-dropin-payment:active {
+  transform: translateY(0);
+}
+
 
 
 .signature-code {

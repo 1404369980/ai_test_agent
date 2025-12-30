@@ -193,7 +193,7 @@ const goHome = () => {
   }
   
   .param-item {
-    flex-direction: column;
+    flex-direction: column;  
     gap: 0.25rem;
   }
   

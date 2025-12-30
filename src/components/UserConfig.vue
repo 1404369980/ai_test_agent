@@ -10,7 +10,92 @@
         <div class="config-section">
           <div class="section-header">
             <h2>商户配置列表</h2>
-            <button @click="showAddForm = true" class="btn-primary">+ 添加商户</button>
+            <div class="header-actions">
+              <button @click="exportAllConfigs" class="btn-export">📤 导出所有配置</button>
+              <button @click="showImportSection = !showImportSection" class="btn-import">📥 导入配置</button>
+              <button @click="showAddForm = true" class="btn-primary">+ 添加商户</button>
+            </div>
+          </div>
+          
+          <!-- 导入配置区域 -->
+          <div v-if="showImportSection" class="import-section">
+            <div class="import-header">
+              <h3>📥 导入商户配置</h3>
+              <p class="import-desc">支持直接编辑、粘贴或从文件加载 JSON 配置数据</p>
+            </div>
+            
+            <div class="json-input-section">
+              <div class="json-input-header">
+                <div class="json-input-title">
+                  <span class="title-text">JSON 配置数据</span>
+                  <span v-if="importJsonText.trim()" class="char-count">
+                    {{ importJsonText.length }} 字符
+                  </span>
+                </div>
+              </div>
+              
+              <div class="json-input-toolbar">
+                <input 
+                  type="file" 
+                  ref="fileInput" 
+                  @change="handleFileImport" 
+                  accept=".json"
+                  class="file-input"
+                />
+                <button @click="fileInput?.click()" class="btn-toolbar btn-file">
+                  <span class="btn-icon">📁</span>
+                  <span class="btn-text">从文件加载</span>
+                </button>
+                <button @click="useJsonTemplate" class="btn-toolbar btn-template">
+                  <span class="btn-icon">🔄</span>
+                  <span class="btn-text">重置模板</span>
+                </button>
+                <button @click="copyCurrentJson" class="btn-toolbar btn-copy" :disabled="!importJsonText.trim()">
+                  <span class="btn-icon">📋</span>
+                  <span class="btn-text">复制</span>
+                </button>
+              </div>
+              
+              <div class="textarea-wrapper">
+                <textarea 
+                  v-model="importJsonText" 
+                  placeholder="在此输入或粘贴 JSON 配置数据，或点击上方按钮从文件加载..."
+                  class="json-input-textarea"
+                  :class="{ 'has-error': importJsonText.trim() && !isValidJson(importJsonText), 'has-success': importJsonText.trim() && isValidJson(importJsonText) }"
+                  rows="10"
+                  @paste="handlePaste"
+                  @input="handleJsonInput"
+                ></textarea>
+                <div v-if="importJsonText.trim() && isValidJson(importJsonText)" class="json-status success">
+                  <span class="status-icon">✓</span>
+                  <span class="status-text">检测到 {{ getJsonConfigCount(importJsonText) }} 个配置，格式正确</span>
+                </div>
+                <div v-else-if="importJsonText.trim() && !isValidJson(importJsonText)" class="json-status error">
+                  <span class="status-icon">✗</span>
+                  <span class="status-text">JSON 格式错误，请检查</span>
+                </div>
+              </div>
+              
+              <div class="import-actions">
+                <button 
+                  @click="handleTextImport" 
+                  class="btn-import-primary" 
+                  :disabled="!importJsonText.trim() || !isValidJson(importJsonText)"
+                  :class="{ 'is-ready': importJsonText.trim() && isValidJson(importJsonText) }"
+                >
+                  <span class="btn-icon">✓</span>
+                  <span class="btn-text">导入配置</span>
+                </button>
+                <button @click="clearImportText" class="btn-clear" v-if="importJsonText.trim()">
+                  <span class="btn-text">清空</span>
+                </button>
+              </div>
+            </div>
+            
+            <div v-if="importError" class="import-error">
+              <span class="error-icon">⚠️</span>
+              <span class="error-text">{{ importError }}</span>
+            </div>
           </div>
           
           <div v-if="configs.length === 0" class="empty-state">
@@ -41,6 +126,13 @@
                 </div>
               </div>
               <div class="config-actions">
+                <button 
+                  @click="copyConfigAsJson(index)" 
+                  class="btn-copy-json"
+                  title="复制为 JSON"
+                >
+                  📋 复制 JSON
+                </button>
                 <button 
                   v-if="!config.isDefault" 
                   @click="setAsDefault(index)" 
@@ -153,7 +245,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import Toast from './Toast.vue'
 import { getAllConfigs, saveAllConfigs, deleteConfig as deleteConfigUtil, setDefaultConfig as setDefaultConfigUtil } from '../services/configManager'
-import { showError, showSuccess } from '../utils/toast'
+import { showError, showSuccess, showInfo } from '../utils/toast'
 import { useNavigation } from '../composables/useNavigation'
 
 const { goHome: goBack } = useNavigation()
@@ -161,6 +253,10 @@ const { goHome: goBack } = useNavigation()
 const configs = ref([])
 const showAddForm = ref(false)
 const editingIndex = ref(null)
+const showImportSection = ref(false)
+const importJsonText = ref('')
+const importError = ref('')
+const fileInput = ref(null)
 
 const formData = reactive({
   name: '',
@@ -305,6 +401,295 @@ const cancelForm = () => {
   formData.isDefault = false
 }
 
+// JSON 数据结构示例
+const jsonStructureExample = computed(() => {
+  return JSON.stringify([
+    {
+      "name": "测试商户1",
+      "baseUrl": "https://openapi-dev.paykka.com",
+      "merchantId": "m9150765120039",
+      "appId": "app123456",
+      "privateKey": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----",
+      "isDefault": true
+    },
+    {
+      "name": "测试商户2",
+      "baseUrl": "https://openapi-fat.paykka.com",
+      "merchantId": "m9150765120040",
+      "appId": "app123457",
+      "privateKey": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----",
+      "isDefault": false
+    }
+  ], null, 2)
+})
+
+// 复制 JSON 结构（模板）
+const copyJsonStructure = async () => {
+  try {
+    await navigator.clipboard.writeText(jsonStructureExample.value)
+    showSuccess('模板已复制到剪贴板')
+  } catch (error) {
+    showError('复制失败，请手动复制')
+  }
+}
+
+// 复制当前输入框的 JSON
+const copyCurrentJson = async () => {
+  if (!importJsonText.value.trim()) {
+    showInfo('输入框为空，无法复制')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(importJsonText.value)
+    showSuccess('已复制到剪贴板')
+  } catch (error) {
+    showError('复制失败，请手动复制')
+  }
+}
+
+// 使用 JSON 模板（填入到导入文本框）
+const useJsonTemplate = () => {
+  importJsonText.value = jsonStructureExample.value
+  importError.value = ''
+  showInfo('已重置为模板，请编辑后导入')
+}
+
+// 处理 JSON 输入
+const handleJsonInput = () => {
+  importError.value = ''
+  // 实时验证
+  if (importJsonText.value.trim() && !isValidJson(importJsonText.value)) {
+    importError.value = 'JSON 格式不正确，请检查'
+  }
+}
+
+// 复制单个配置为 JSON
+const copyConfigAsJson = async (index) => {
+  try {
+    const config = configs.value[index]
+    if (!config) {
+      showError('配置不存在')
+      return
+    }
+    
+    const configJson = JSON.stringify([config], null, 2)
+    await navigator.clipboard.writeText(configJson)
+    showSuccess('配置已复制为 JSON')
+  } catch (error) {
+    showError('复制失败，请重试')
+  }
+}
+
+// 导出所有配置为 JSON
+const exportAllConfigs = async () => {
+  try {
+    if (configs.value.length === 0) {
+      showInfo('暂无配置可导出')
+      return
+    }
+    
+    const allConfigsJson = JSON.stringify(configs.value, null, 2)
+    await navigator.clipboard.writeText(allConfigsJson)
+    showSuccess(`已复制 ${configs.value.length} 个配置到剪贴板`)
+  } catch (error) {
+    showError('导出失败，请重试')
+  }
+}
+
+// 验证配置数据
+const validateConfigData = (data) => {
+  if (!Array.isArray(data)) {
+    return { valid: false, error: '配置数据必须是数组格式' }
+  }
+  
+  for (let i = 0; i < data.length; i++) {
+    const config = data[i]
+    if (!config.merchantId || typeof config.merchantId !== 'string') {
+      return { valid: false, error: `第 ${i + 1} 个配置缺少 merchantId 字段` }
+    }
+    if (!config.appId || typeof config.appId !== 'string') {
+      return { valid: false, error: `第 ${i + 1} 个配置缺少 appId 字段` }
+    }
+    if (!config.privateKey || typeof config.privateKey !== 'string') {
+      return { valid: false, error: `第 ${i + 1} 个配置缺少 privateKey 字段` }
+    }
+    if (config.baseUrl && typeof config.baseUrl !== 'string') {
+      return { valid: false, error: `第 ${i + 1} 个配置的 baseUrl 必须是字符串` }
+    }
+  }
+  
+  return { valid: true }
+}
+
+// 处理文件导入（加载到输入框）
+const handleFileImport = async (event) => {
+  const file = event.target.files[0]
+  if (!file) {
+    return
+  }
+  
+  if (!file.name.endsWith('.json')) {
+    importError.value = '请选择 JSON 格式的文件'
+    return
+  }
+  
+  try {
+    const text = await file.text()
+    // 验证 JSON 格式
+    JSON.parse(text)
+    // 将文件内容加载到输入框
+    importJsonText.value = text
+    importError.value = ''
+    showSuccess('文件已加载到输入框，请检查后点击导入')
+  } catch (error) {
+    importError.value = `解析 JSON 失败: ${error.message}`
+  }
+  
+  // 清空文件选择
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
+
+// 验证 JSON 格式
+const isValidJson = (text) => {
+  if (!text.trim()) return false
+  try {
+    JSON.parse(text)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// 获取 JSON 配置数量
+const getJsonConfigCount = (text) => {
+  try {
+    const data = JSON.parse(text)
+    if (Array.isArray(data)) {
+      return data.length
+    }
+    return 1
+  } catch {
+    return 0
+  }
+}
+
+// 处理粘贴事件
+const handlePaste = () => {
+  // 清除之前的错误信息
+  importError.value = ''
+  // 延迟验证，等待粘贴内容完成
+  setTimeout(() => {
+    if (importJsonText.value.trim() && !isValidJson(importJsonText.value)) {
+      importError.value = 'JSON 格式不正确，请检查'
+    } else if (importJsonText.value.trim() && isValidJson(importJsonText.value)) {
+      importError.value = ''
+    }
+  }, 100)
+}
+
+// 清空导入文本
+const clearImportText = () => {
+  importJsonText.value = ''
+  importError.value = ''
+}
+
+// 处理文本导入
+const handleTextImport = () => {
+  if (!importJsonText.value.trim()) {
+    importError.value = '请输入 JSON 配置数据'
+    return
+  }
+  
+  if (!isValidJson(importJsonText.value)) {
+    importError.value = 'JSON 格式不正确，请检查'
+    return
+  }
+  
+  try {
+    const data = JSON.parse(importJsonText.value)
+    importConfigs(data)
+    // 导入成功后清空文本
+    importJsonText.value = ''
+    importError.value = ''
+  } catch (error) {
+    importError.value = `解析 JSON 失败: ${error.message}`
+  }
+}
+
+// 导入配置
+const importConfigs = (data) => {
+  importError.value = ''
+  
+  // 验证数据
+  const validation = validateConfigData(data)
+  if (!validation.valid) {
+    importError.value = validation.error
+    return
+  }
+  
+  // 合并配置
+  const existingConfigs = [...configs.value]
+  let importedCount = 0
+  let updatedCount = 0
+  let skippedCount = 0
+  
+  data.forEach(newConfig => {
+    const existingIndex = existingConfigs.findIndex(c => c.merchantId === newConfig.merchantId)
+    
+    if (existingIndex >= 0) {
+      // 更新现有配置
+      existingConfigs[existingIndex] = {
+        ...existingConfigs[existingIndex],
+        ...newConfig,
+        merchantId: newConfig.merchantId // 确保 merchantId 不被覆盖
+      }
+      updatedCount++
+    } else {
+      // 添加新配置
+      existingConfigs.push({
+        name: newConfig.name || newConfig.merchantId,
+        baseUrl: newConfig.baseUrl || 'https://openapi-dev.paykka.com',
+        merchantId: newConfig.merchantId,
+        appId: newConfig.appId,
+        privateKey: newConfig.privateKey,
+        isDefault: newConfig.isDefault || false
+      })
+      importedCount++
+    }
+  })
+  
+  // 如果导入的配置中有默认配置，确保只有一个默认配置
+  const defaultConfigs = existingConfigs.filter(c => c.isDefault)
+  if (defaultConfigs.length > 1) {
+    // 保留第一个默认配置，其他取消默认
+    for (let i = 1; i < defaultConfigs.length; i++) {
+      const config = existingConfigs.find(c => c.merchantId === defaultConfigs[i].merchantId)
+      if (config) {
+        config.isDefault = false
+      }
+    }
+  }
+  
+  // 保存配置
+  if (saveAllConfigs(existingConfigs)) {
+    loadConfigs()
+    let message = `导入成功！`
+    if (importedCount > 0) {
+      message += ` 新增 ${importedCount} 个配置`
+    }
+    if (updatedCount > 0) {
+      message += ` 更新 ${updatedCount} 个配置`
+    }
+    showSuccess(message)
+    showImportSection.value = false
+    importError.value = ''
+  } else {
+    importError.value = '保存配置失败，请重试'
+  }
+}
+
 onMounted(() => {
   loadConfigs()
 })
@@ -381,6 +766,11 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .section-header h2 {
@@ -649,6 +1039,445 @@ onMounted(() => {
   cursor: pointer;
 }
 
+.import-section {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.import-header {
+  margin-bottom: 1.5rem;
+}
+
+.import-header h3 {
+  font-size: 1.4rem;
+  color: #333;
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.import-desc {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.json-input-section {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.json-input-header {
+  margin-bottom: 1rem;
+}
+
+.json-input-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.title-text {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+}
+
+.char-count {
+  font-size: 0.85rem;
+  color: #999;
+  background: #f5f5f5;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.json-input-toolbar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.textarea-wrapper {
+  position: relative;
+  margin-bottom: 1rem;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.json-input-textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-family: 'Courier New', 'Monaco', 'Menlo', 'Consolas', monospace;
+  resize: vertical;
+  line-height: 1.6;
+  background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+  color: #2c3e50;
+  transition: all 0.3s ease;
+  min-height: 250px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.json-input-textarea::placeholder {
+  color: #bbb;
+  font-style: italic;
+}
+
+.json-input-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15), inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.json-input-textarea.has-success {
+  border-color: #4caf50;
+  background: linear-gradient(135deg, #f1f8f4 0%, #ffffff 100%);
+}
+
+.json-input-textarea.has-success:focus {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.15), inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.json-input-textarea.has-error {
+  border-color: #f44336;
+  background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+}
+
+.json-input-textarea.has-error:focus {
+  border-color: #f44336;
+  box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.15), inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.import-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.json-structure {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.json-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #666;
+}
+
+.json-header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.json-display {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #333;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.import-options {
+  margin-top: 1rem;
+}
+
+.import-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tab-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.tab-button:hover {
+  background: #f5f5f5;
+}
+
+.tab-button.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.import-file {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.file-input {
+  display: none;
+}
+
+.import-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.import-text-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border: 1.5px solid;
+  border-radius: 8px;
+  background: white;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.btn-toolbar:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-toolbar:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.btn-toolbar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  display: inline-block;
+}
+
+.btn-text {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.btn-import-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  background: #ccc;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: not-allowed;
+  transition: all 0.3s;
+}
+
+.btn-import-primary.is-ready {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-import-primary.is-ready:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-clear {
+  padding: 0.75rem 1.2rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  color: #666;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.btn-clear:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+.import-textarea {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+}
+
+.import-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.import-error {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
+  border: 2px solid #f44336;
+  border-radius: 8px;
+  color: #c62828;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.1);
+}
+
+.error-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.error-text {
+  flex: 1;
+  line-height: 1.5;
+}
+
+.btn-import {
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.btn-import:hover {
+  background: #218838;
+}
+
+.btn-export {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.btn-export:hover {
+  background: #138496;
+}
+
+.btn-copy-json {
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.btn-copy-json:hover {
+  background: #5a6268;
+}
+
+.btn-file {
+  border-color: #17a2b8;
+  color: #17a2b8;
+  background: rgba(23, 162, 184, 0.05);
+}
+
+.btn-file:hover:not(:disabled) {
+  background: #17a2b8;
+  color: white;
+  border-color: #17a2b8;
+}
+
+.btn-template {
+  border-color: #667eea;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.btn-template:hover:not(:disabled) {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.btn-copy {
+  border-color: #6c757d;
+  color: #6c757d;
+  background: rgba(108, 117, 125, 0.05);
+}
+
+.btn-copy:hover:not(:disabled) {
+  background: #6c757d;
+  color: white;
+  border-color: #6c757d;
+}
+
 @media (max-width: 768px) {
   .config-item {
     flex-direction: column;
@@ -664,6 +1493,19 @@ onMounted(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+  }
+  
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .import-tabs {
+    flex-direction: column;
+  }
+  
+  .tab-button {
+    border-radius: 6px;
   }
 }
 </style>
