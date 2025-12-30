@@ -448,10 +448,24 @@ const jsonStructureExample = computed(() => {
 // 复制 JSON 结构（模板）
 const copyJsonStructure = async () => {
   try {
-    await navigator.clipboard.writeText(jsonStructureExample.value)
-    showSuccess('模板已复制到剪贴板')
+    const textToCopy = jsonStructureExample.value
+    // 优先使用 Clipboard API
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(textToCopy)
+      showSuccess('模板已复制到剪贴板')
+    } else {
+      // 降级方案：使用传统方法
+      fallbackCopyToClipboard(textToCopy)
+      showSuccess('模板已复制到剪贴板')
+    }
   } catch (error) {
-    showError('复制失败，请手动复制')
+    // 如果 Clipboard API 失败，使用降级方案
+    try {
+      fallbackCopyToClipboard(jsonStructureExample.value)
+      showSuccess('模板已复制到剪贴板')
+    } catch (e) {
+      showError('复制失败，请手动复制')
+    }
   }
 }
 
@@ -462,10 +476,24 @@ const copyCurrentJson = async () => {
     return
   }
   try {
-    await navigator.clipboard.writeText(importJsonText.value)
-    showSuccess('已复制到剪贴板')
+    const textToCopy = importJsonText.value
+    // 优先使用 Clipboard API
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(textToCopy)
+      showSuccess('已复制到剪贴板')
+    } else {
+      // 降级方案：使用传统方法
+      fallbackCopyToClipboard(textToCopy)
+      showSuccess('已复制到剪贴板')
+    }
   } catch (error) {
-    showError('复制失败，请手动复制')
+    // 如果 Clipboard API 失败，使用降级方案
+    try {
+      fallbackCopyToClipboard(importJsonText.value)
+      showSuccess('已复制到剪贴板')
+    } catch (e) {
+      showError('复制失败，请手动复制')
+    }
   }
 }
 
@@ -495,10 +523,25 @@ const copyConfigAsJson = async (index) => {
     }
     
     const configJson = JSON.stringify([config], null, 2)
-    await navigator.clipboard.writeText(configJson)
-    showSuccess('配置已复制为 JSON')
+    // 优先使用 Clipboard API
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(configJson)
+      showSuccess('配置已复制为 JSON')
+    } else {
+      // 降级方案：使用传统方法
+      fallbackCopyToClipboard(configJson)
+      showSuccess('配置已复制为 JSON')
+    }
   } catch (error) {
-    showError('复制失败，请重试')
+    // 如果 Clipboard API 失败，使用降级方案
+    try {
+      const config = configs.value[index]
+      const configJson = JSON.stringify([config], null, 2)
+      fallbackCopyToClipboard(configJson)
+      showSuccess('配置已复制为 JSON')
+    } catch (e) {
+      showError('复制失败，请重试')
+    }
   }
 }
 
@@ -511,10 +554,24 @@ const exportAllConfigs = async () => {
     }
     
     const allConfigsJson = JSON.stringify(configs.value, null, 2)
-    await navigator.clipboard.writeText(allConfigsJson)
-    showSuccess(`已复制 ${configs.value.length} 个配置到剪贴板`)
+    // 优先使用 Clipboard API
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(allConfigsJson)
+      showSuccess(`已复制 ${configs.value.length} 个配置到剪贴板`)
+    } else {
+      // 降级方案：使用传统方法
+      fallbackCopyToClipboard(allConfigsJson)
+      showSuccess(`已复制 ${configs.value.length} 个配置到剪贴板`)
+    }
   } catch (error) {
-    showError('导出失败，请重试')
+    // 如果 Clipboard API 失败，使用降级方案
+    try {
+      const allConfigsJson = JSON.stringify(configs.value, null, 2)
+      fallbackCopyToClipboard(allConfigsJson)
+      showSuccess(`已复制 ${configs.value.length} 个配置到剪贴板`)
+    } catch (e) {
+      showError('导出失败，请重试')
+    }
   }
 }
 
@@ -618,6 +675,39 @@ const handlePaste = () => {
 const clearImportText = () => {
   importJsonText.value = ''
   importError.value = ''
+}
+
+// 降级复制方案（用于不支持 Clipboard API 的环境，如局域网 IP）
+const fallbackCopyToClipboard = (text) => {
+  const textArea = document.createElement('textarea')
+  textArea.value = text
+  textArea.style.position = 'fixed'
+  textArea.style.top = '0'
+  textArea.style.left = '0'
+  textArea.style.width = '2em'
+  textArea.style.height = '2em'
+  textArea.style.padding = '0'
+  textArea.style.border = 'none'
+  textArea.style.outline = 'none'
+  textArea.style.boxShadow = 'none'
+  textArea.style.background = 'transparent'
+  textArea.style.opacity = '0'
+  textArea.style.zIndex = '-1'
+  document.body.appendChild(textArea)
+  textArea.focus()
+  textArea.select()
+  
+  try {
+    const successful = document.execCommand('copy')
+    if (!successful) {
+      throw new Error('execCommand copy failed')
+    }
+  } catch (err) {
+    document.body.removeChild(textArea)
+    throw err
+  }
+  
+  document.body.removeChild(textArea)
 }
 
 // 处理文本导入

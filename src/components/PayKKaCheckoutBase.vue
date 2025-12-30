@@ -858,13 +858,14 @@ const openDropInPayment = () => {
     // 保存完整的响应数据到 localStorage
     localStorage.setItem('paykka_dropin_session', JSON.stringify(paymentData))
     
-    // 跳转到 DropIn 支付页面，传递响应数据
-    router.push({
-      path: '/dropin-payment',
-      query: {
-        responseData: encodeURIComponent(JSON.stringify(paymentData))
-      }
+    // 构建 URL，传递响应数据
+    const queryParams = new URLSearchParams({
+      responseData: encodeURIComponent(JSON.stringify(paymentData))
     })
+    const url = `${window.location.origin}/dropin-payment?${queryParams.toString()}`
+    
+    // 在新标签页中打开 DropIn 支付页面
+    window.open(url, '_blank')
   } else {
     console.error('响应数据不完整:', responseData)
     showError('未找到支付会话数据，请先创建支付会话')
@@ -1603,28 +1604,61 @@ const updateFormFromJson = () => {
   }
 }
 
+// 降级复制方案（用于不支持 Clipboard API 的环境，如局域网 IP）
+const fallbackCopyToClipboard = (text) => {
+  const textArea = document.createElement('textarea')
+  textArea.value = text
+  textArea.style.position = 'fixed'
+  textArea.style.top = '0'
+  textArea.style.left = '0'
+  textArea.style.width = '2em'
+  textArea.style.height = '2em'
+  textArea.style.padding = '0'
+  textArea.style.border = 'none'
+  textArea.style.outline = 'none'
+  textArea.style.boxShadow = 'none'
+  textArea.style.background = 'transparent'
+  textArea.style.opacity = '0'
+  textArea.style.zIndex = '-1'
+  document.body.appendChild(textArea)
+  textArea.focus()
+  textArea.select()
+  
+  try {
+    const successful = document.execCommand('copy')
+    if (!successful) {
+      throw new Error('execCommand copy failed')
+    }
+  } catch (err) {
+    document.body.removeChild(textArea)
+    throw err
+  }
+  
+  document.body.removeChild(textArea)
+}
+
 // 复制JSON到剪贴板
 const copyJson = async () => {
   try {
     const textToCopy = editableJson.value || requestParamsJson.value
-    await navigator.clipboard.writeText(textToCopy)
-    showSuccess('JSON已复制到剪贴板')
+    // 优先使用 Clipboard API（需要 HTTPS 或 localhost）
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(textToCopy)
+      showSuccess('JSON已复制到剪贴板')
+    } else {
+      // 降级方案：使用传统方法（适用于局域网 IP 等非安全上下文）
+      fallbackCopyToClipboard(textToCopy)
+      showSuccess('JSON已复制到剪贴板')
+    }
   } catch (err) {
-    // 降级方案：使用传统方法
-    const textArea = document.createElement('textarea')
-    const textToCopy = editableJson.value || requestParamsJson.value
-    textArea.value = textToCopy
-    textArea.style.position = 'fixed'
-    textArea.style.opacity = '0'
-    document.body.appendChild(textArea)
-    textArea.select()
+    // 如果 Clipboard API 失败，使用降级方案
     try {
-      document.execCommand('copy')
+      const textToCopy = editableJson.value || requestParamsJson.value
+      fallbackCopyToClipboard(textToCopy)
       showSuccess('JSON已复制到剪贴板')
     } catch (e) {
       showError('复制失败，请手动复制')
     }
-    document.body.removeChild(textArea)
   }
 }
 
