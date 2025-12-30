@@ -52,6 +52,7 @@ export function useMerchantConfig(apiConfig, options = { autoLoad: true }) {
       apiConfig.merchantId = ''
       apiConfig.appId = ''
       apiConfig.privateKey = ''
+      apiConfig.clientKey = ''
     }
   }
 
@@ -62,6 +63,7 @@ export function useMerchantConfig(apiConfig, options = { autoLoad: true }) {
       apiConfig.merchantId = config.merchantId || ''
       apiConfig.appId = config.appId || ''
       apiConfig.privateKey = config.privateKey || ''
+      apiConfig.clientKey = config.clientKey || ''
     }
   }
 

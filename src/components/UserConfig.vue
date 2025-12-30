@@ -123,6 +123,10 @@
                     <span class="label">私钥:</span>
                     <span class="value private-key">{{ config.privateKey.substring(0, 50) }}...</span>
                   </div>
+                  <div class="detail-item" v-if="config.clientKey">
+                    <span class="label">Client Key:</span>
+                    <span class="value">{{ config.clientKey }}</span>
+                  </div>
                 </div>
               </div>
               <div class="config-actions">
@@ -217,6 +221,17 @@
           </div>
           
           <div class="form-group">
+            <label>Client Key</label>
+            <input 
+              type="text" 
+              v-model="formData.clientKey" 
+              placeholder="请输入 Client Key（可选，用于 DropIn 支付）"
+              class="input-field"
+            />
+            <small class="field-desc">Client Key，用于 DropIn 支付组件初始化（可选）</small>
+          </div>
+          
+          <div class="form-group">
             <label class="checkbox-label">
               <input 
                 type="checkbox" 
@@ -264,6 +279,7 @@ const formData = reactive({
   merchantId: '',
   appId: '',
   privateKey: '',
+  clientKey: '',
   isDefault: false
 })
 
@@ -292,6 +308,7 @@ const saveConfig = () => {
     merchantId: formData.merchantId.trim(),
     appId: formData.appId.trim(),
     privateKey: formData.privateKey.trim(),
+    clientKey: formData.clientKey.trim(),
     isDefault: formData.isDefault || false
   }
   
@@ -360,6 +377,8 @@ const editConfig = (index) => {
   formData.merchantId = config.merchantId
   formData.appId = config.appId
   formData.privateKey = config.privateKey
+  formData.clientKey = config.clientKey || ''
+  formData.clientKey = config.clientKey || ''
   formData.isDefault = config.isDefault || false
   editingIndex.value = index
   showAddForm.value = true
@@ -398,6 +417,7 @@ const cancelForm = () => {
   formData.merchantId = ''
   formData.appId = ''
   formData.privateKey = ''
+  formData.clientKey = ''
   formData.isDefault = false
 }
 
@@ -410,6 +430,7 @@ const jsonStructureExample = computed(() => {
       "merchantId": "m9150765120039",
       "appId": "app123456",
       "privateKey": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----",
+      "clientKey": "ck_be5ff3c3f7e3e46225d5253761cfd010",
       "isDefault": true
     },
     {
@@ -418,6 +439,7 @@ const jsonStructureExample = computed(() => {
       "merchantId": "m9150765120040",
       "appId": "app123457",
       "privateKey": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----",
+      "clientKey": "ck_be5ff3c3f7e3e46225d5253761cfd010",
       "isDefault": false
     }
   ], null, 2)
@@ -515,6 +537,9 @@ const validateConfigData = (data) => {
     }
     if (config.baseUrl && typeof config.baseUrl !== 'string') {
       return { valid: false, error: `第 ${i + 1} 个配置的 baseUrl 必须是字符串` }
+    }
+    if (config.clientKey && typeof config.clientKey !== 'string') {
+      return { valid: false, error: `第 ${i + 1} 个配置的 clientKey 必须是字符串` }
     }
   }
   
@@ -643,7 +668,8 @@ const importConfigs = (data) => {
       existingConfigs[existingIndex] = {
         ...existingConfigs[existingIndex],
         ...newConfig,
-        merchantId: newConfig.merchantId // 确保 merchantId 不被覆盖
+        merchantId: newConfig.merchantId, // 确保 merchantId 不被覆盖
+        clientKey: newConfig.clientKey !== undefined ? newConfig.clientKey : existingConfigs[existingIndex].clientKey || '' // 更新或保留 clientKey
       }
       updatedCount++
     } else {
@@ -654,6 +680,7 @@ const importConfigs = (data) => {
         merchantId: newConfig.merchantId,
         appId: newConfig.appId,
         privateKey: newConfig.privateKey,
+        clientKey: newConfig.clientKey || '',
         isDefault: newConfig.isDefault || false
       })
       importedCount++

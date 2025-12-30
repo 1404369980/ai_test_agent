@@ -212,11 +212,33 @@
             </div>
 
             <div class="form-group">
+              <label>地址收集 (Address Collection)</label>
+              <select v-model="checkoutData.addressCollection" class="input-field">
+                <option value="AUTO">AUTO - 自动</option>
+                <option value="REQUIRED">REQUIRED - 必需</option>
+                <option value="NONE">NONE - 无</option>
+              </select>
+              <small class="field-desc">默认值：AUTO</small>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
               <label>成功返回地址 (Return URL)</label>
               <input 
                 v-model="checkoutData.returnUrl" 
                 type="text" 
                 placeholder="https://your-domain.com/success"
+                class="input-field"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>失败返回地址 (Cancel URL)</label>
+              <input 
+                v-model="checkoutData.cancelUrl" 
+                type="text" 
+                placeholder="https://your-domain.com/cancel"
                 class="input-field"
               />
             </div>
@@ -826,7 +848,8 @@ const openDropInPayment = () => {
       apiConfig: {
         baseUrl: apiConfig.baseUrl,
         merchantId: apiConfig.merchantId,
-        appId: apiConfig.appId
+        appId: apiConfig.appId,
+        clientKey: apiConfig.clientKey
       },
       // 时间戳
       timestamp: new Date().toISOString()
@@ -1140,6 +1163,8 @@ const generateAllRandom = () => {
   // 保持过期时间为默认值（当前时间之后半小时），不随机生成
   checkoutData.expireTime = getDefaultExpireTime()
   
+  // 注意：addressCollection 不参与随机生成，保持用户设置的值或默认值 'AUTO'
+  
   checkoutData.returnUrl = getDefaultReturnUrl()
   checkoutData.cancelUrl = getDefaultCancelUrl()
 }
@@ -1193,6 +1218,7 @@ const resetForm = () => {
   checkoutData.description = ''
   checkoutData.captureMethod = 'AUTOMATIC'
   checkoutData.expireTime = getDefaultExpireTime()
+  checkoutData.addressCollection = 'AUTO'
   checkoutData.returnUrl = getDefaultReturnUrl()
   checkoutData.cancelUrl = getDefaultCancelUrl()
   // 重置开关
@@ -1392,6 +1418,7 @@ const buildRequestParams = () => {
       description: checkoutData.description || '(未填写)',
       capture_method: checkoutData.captureMethod || 'AUTOMATIC',
       expire_time: checkoutData.expireTime ? formatExpireTime(checkoutData.expireTime) : '(未填写)',
+      address_collection: checkoutData.addressCollection || 'AUTO',
       return_url: checkoutData.returnUrl || '(未填写)',
       cancel_url: checkoutData.cancelUrl || '(未填写)',
       goods: goodsObj || '(未填写)'
@@ -1494,6 +1521,9 @@ const updateFormFromJson = () => {
     }
     if (params.expire_time && params.expire_time !== '(未填写)') {
       checkoutData.expireTime = params.expire_time
+    }
+    if (params.address_collection && params.address_collection !== '(未填写)') {
+      checkoutData.addressCollection = params.address_collection
     }
     if (params.return_url && params.return_url !== '(未填写)') {
       checkoutData.returnUrl = params.return_url
@@ -1626,6 +1656,7 @@ const createCheckout = async () => {
       description: checkoutData.description || `订单 ${checkoutData.transId}`,
       capture_method: checkoutData.captureMethod || 'AUTOMATIC',
       expire_time: checkoutData.expireTime ? formatExpireTime(checkoutData.expireTime) : '',
+      address_collection: checkoutData.addressCollection || 'AUTO',
       return_url: checkoutData.returnUrl || '',
       cancel_url: checkoutData.cancelUrl || '',
       goods: goodsObj

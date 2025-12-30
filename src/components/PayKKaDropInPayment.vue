@@ -220,8 +220,10 @@
         cdnUrl = 'https://checkout-fat.eu.paykka.com/cp'
       }
   
-      // 获取 clientKey（从响应数据、配置或使用默认值）
-      const clientKey =  'ck_be5ff3c3f7e3e46225d5253761cfd010'
+    // 获取 clientKey（从响应数据、配置或使用默认值）
+    const clientKey = sessionData.value?.clientKey || 
+                     sessionData.value?.apiConfig?.clientKey ||
+                     'ck_be5ff3c3f7e3e46225d5253761cfd010'
   
       // 从响应数据中提取其他配置信息
       const responseData = sessionData.value.responseData || {}
@@ -237,7 +239,7 @@
   
       console.log('创建 PayKKaCheckout 实例，使用数据:', {
         sessionId: sessionData.value.session_id,
-        clientKey: 'ck_be5ff3c3f7e3e46225d5253761cfd010',
+        clientKey: clientKey,
       //   env,
         apiUrl,
         sessionMode: sessionInfo.session_mode,
@@ -576,11 +578,12 @@
               sessionData.value = response
             }
             
-            if (parsed.apiConfig) {
-              sessionData.value.baseUrl = parsed.apiConfig.baseUrl || ''
-              sessionData.value.appId = parsed.apiConfig.appId || ''
-              sessionData.value.merchantId = parsed.apiConfig.merchantId || ''
-            }
+          if (parsed.apiConfig) {
+            sessionData.value.baseUrl = parsed.apiConfig.baseUrl || ''
+            sessionData.value.appId = parsed.apiConfig.appId || ''
+            sessionData.value.merchantId = parsed.apiConfig.merchantId || ''
+            sessionData.value.clientKey = parsed.apiConfig.clientKey || ''
+          }
           } else if (parsed.data) {
             sessionData.value = parsed.data
             sessionData.value.responseData = parsed
@@ -618,13 +621,14 @@
                 sessionData.value = response
               }
               
-              if (session.apiConfig) {
-                sessionData.value.baseUrl = session.apiConfig.baseUrl || ''
-                sessionData.value.appId = session.apiConfig.appId || ''
-                sessionData.value.merchantId = session.apiConfig.merchantId || ''
-              } else if (session.baseUrl) {
-                sessionData.value.baseUrl = session.baseUrl
-              }
+            if (session.apiConfig) {
+              sessionData.value.baseUrl = session.apiConfig.baseUrl || ''
+              sessionData.value.appId = session.apiConfig.appId || ''
+              sessionData.value.merchantId = session.apiConfig.merchantId || ''
+              sessionData.value.clientKey = session.apiConfig.clientKey || ''
+            } else if (session.baseUrl) {
+              sessionData.value.baseUrl = session.baseUrl
+            }
             } else if (session.data) {
               sessionData.value = session.data
               if (session.baseUrl) {
