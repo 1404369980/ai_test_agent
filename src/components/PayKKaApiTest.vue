@@ -8,81 +8,157 @@
       
       <div class="test-panel">
         <div class="form-section">
-          <h2>交易参数配置</h2>
+          <h2>API 配置</h2>
           
-          <div class="form-group">
-            <label>API 地址</label>
-            <input 
-              v-model="apiConfig.baseUrl" 
-              type="text" 
-              placeholder="https://api.paykka.com"
-              class="input-field"
-            />
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>API 地址</label>
+              <input 
+                :value="apiConfig.baseUrl || (selectedMerchantId ? '' : '请先选择商户配置')" 
+                type="text" 
+                readonly
+                placeholder="从商户配置中自动获取"
+                class="input-field readonly"
+              />
+              <small class="field-desc">从选择的商户配置中自动获取，无需手动输入</small>
+            </div>
+
+            <div class="form-group">
+              <label>商户ID (Merchant ID)</label>
+              <select 
+                v-model="selectedMerchantId" 
+                @change="onMerchantChange"
+                class="input-field"
+              >
+                <option value="">-- 请选择商户 --</option>
+                <option v-for="config in merchantConfigs" :key="config.merchantId" :value="config.merchantId">
+                  {{ config.name || config.merchantId }}
+                </option>
+              </select>
+              <small class="field-desc">从已配置的商户中选择，选择后将自动填充API地址、商户ID、App ID和私钥</small>
+            </div>
           </div>
 
           <div class="form-group">
-            <label>商户ID (Merchant ID)</label>
-            <select 
-              v-model="selectedMerchantId" 
-              @change="onMerchantChange"
-              class="input-field"
-            >
-              <option value="">-- 请选择商户 --</option>
-              <option v-for="config in merchantConfigs" :key="config.merchantId" :value="config.merchantId">
-                {{ config.name || config.merchantId }}
-              </option>
-            </select>
-            <small class="field-desc">从已配置的商户中选择，选择后将自动填充App ID和私钥</small>
-          </div>
-
-          <div class="form-group">
-            <label>API密钥 (API Key)</label>
-            <input 
-              v-model="apiConfig.apiKey" 
-              type="password" 
-              placeholder="请输入API密钥"
-              class="input-field"
-            />
+            <label>私钥 (Private Key) <span class="required">*</span></label>
+            <div class="private-key-container">
+              <input 
+                v-if="!showPrivateKeyFull"
+                :value="apiConfig.privateKey ? (apiConfig.privateKey.substring(0, 50) + '...') : (selectedMerchantId ? '' : '请先选择商户配置')" 
+                readonly
+                class="input-field readonly"
+                :placeholder="selectedMerchantId ? '从商户配置中自动获取' : '请先选择商户配置'"
+                @click="showPrivateKeyFull = true"
+              />
+              <textarea 
+                v-else
+                :value="apiConfig.privateKey || (selectedMerchantId ? '' : '请先选择商户配置')" 
+                readonly
+                class="input-field textarea readonly"
+                rows="6"
+                :placeholder="selectedMerchantId ? '从商户配置中自动获取' : '请先选择商户配置'"
+              ></textarea>
+              <button 
+                v-if="apiConfig.privateKey" 
+                @click="showPrivateKeyFull = !showPrivateKeyFull" 
+                class="btn-toggle-key"
+                type="button"
+              >
+                {{ showPrivateKeyFull ? '收起' : '展开' }}
+              </button>
+            </div>
+            <small class="field-desc">从选择的商户配置中自动获取，无需手动输入</small>
           </div>
 
           <div class="divider"></div>
 
-          <h3>交易信息</h3>
+          <h3>请求头参数 (Headers)</h3>
 
-          <div class="form-row">
+          <div class="form-group">
+            <label>x-paykka-appid <span class="required">*</span></label>
+            <input 
+              :value="apiConfig.appId || (selectedMerchantId ? '' : '请先选择商户配置')" 
+              type="text" 
+              readonly
+              placeholder="从商户配置中自动获取"
+              class="input-field readonly"
+            />
+            <small class="field-desc">从选择的商户配置中自动获取，无需手动输入</small>
+          </div>
+
+          <div class="divider"></div>
+
+          <h3>交易参数</h3>
+
+          <div class="form-row-3">
             <div class="form-group">
-              <label>订单号 (Order No)</label>
-              <input 
-                v-model="transactionData.orderNo" 
-                type="text" 
-                placeholder="自动生成"
-                class="input-field"
-              />
-              <button @click="generateOrderNo" class="btn-small">生成</button>
+              <label>交易ID (Trans ID) <span class="required">*</span></label>
+              <div class="input-with-button">
+                <input 
+                  v-model="transactionData.transId" 
+                  type="text" 
+                  placeholder="自动生成"
+                  class="input-field"
+                />
+                <button @click="generateTransId" class="btn-small">随机生成</button>
+              </div>
             </div>
 
             <div class="form-group">
               <label>交易金额 (Amount)</label>
-              <input 
-                v-model.number="transactionData.amount" 
-                type="number" 
-                step="0.01"
-                placeholder="0.00"
-                class="input-field"
-              />
+              <div class="input-with-button">
+                <input 
+                  v-model.number="transactionData.amount" 
+                  type="number" 
+                  step="0.01"
+                  placeholder="0.00"
+                  class="input-field"
+                />
+                <button @click="generateRandomAmount" class="btn-small">随机金额</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>币种 (Currency)</label>
+              <div class="input-with-button">
+                <input 
+                  v-model="transactionData.currency" 
+                  type="text" 
+                  list="currency-list"
+                  placeholder="选择或输入币种"
+                  class="input-field"
+                />
+                <datalist id="currency-list">
+                  <option value="USD">USD - 美元</option>
+                  <option value="EUR">EUR - 欧元</option>
+                  <option value="GBP">GBP - 英镑</option>
+                  <option value="CNY">CNY - 人民币</option>
+                  <option value="JPY">JPY - 日元</option>
+                  <option value="HKD">HKD - 港币</option>
+                  <option value="SGD">SGD - 新加坡元</option>
+                </datalist>
+                <button @click="generateRandomCurrency" class="btn-small">随机币种</button>
+              </div>
             </div>
           </div>
 
-          <div class="form-row">
+          <div class="form-row-2">
             <div class="form-group">
-              <label>币种 (Currency)</label>
-              <select v-model="transactionData.currency" class="input-field">
-                <option value="USD">USD - 美元</option>
-                <option value="EUR">EUR - 欧元</option>
-                <option value="GBP">GBP - 英镑</option>
-                <option value="CNY">CNY - 人民币</option>
-                <option value="JPY">JPY - 日元</option>
-              </select>
+              <label>支付类型 (Payment Type) <span class="required">*</span></label>
+              <input 
+                v-model="transactionData.paymentType" 
+                type="text" 
+                list="payment-type-list"
+                placeholder="选择或输入支付类型"
+                class="input-field"
+              />
+              <datalist id="payment-type-list">
+                <option value="PURCHASE">PURCHASE - 消费</option>
+                <option value="PREPARE_AUTHORIZE">PREPARE_AUTHORIZE - 预授权</option>
+                <option value="RECURRING">RECURRING - 循环支付</option>
+                <option value="REFUND">REFUND - 退款</option>
+              </datalist>
+              <small class="field-desc">默认值：PURCHASE</small>
             </div>
 
             <div class="form-group">
@@ -101,8 +177,62 @@
               v-model="transactionData.description" 
               placeholder="请输入商品描述"
               class="input-field textarea"
-              rows="3"
+              rows="2"
             ></textarea>
+            <button @click="generateRandomDescription" class="btn-small" style="margin-top: 0.3rem;">随机描述</button>
+          </div>
+
+          <div class="form-row-3">
+            <div class="form-group">
+              <label>请款方式 (Capture Method) <span class="required">*</span></label>
+              <select v-model="transactionData.captureMethod" class="input-field">
+                <option value="AUTOMATIC">AUTOMATIC - 自动</option>
+                <option value="MANUAL">MANUAL - 手动</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>过期时间 (Expire Time)</label>
+              <input 
+                v-model="transactionData.expireTime" 
+                type="datetime-local"
+                class="input-field"
+                placeholder="2023-11-24T11:34:37+0800"
+              />
+              <small class="field-desc">格式: YYYY-MM-DDTHH:mm:ss+0800</small>
+            </div>
+
+            <div class="form-group">
+              <label>地址收集 (Address Collection)</label>
+              <select v-model="transactionData.addressCollection" class="input-field">
+                <option value="AUTO">AUTO - 自动</option>
+                <option value="REQUIRED">REQUIRED - 必需</option>
+                <option value="NONE">NONE - 无</option>
+              </select>
+              <small class="field-desc">默认值：AUTO</small>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>成功返回地址 (Return URL)</label>
+              <input 
+                v-model="transactionData.returnUrl" 
+                type="text" 
+                placeholder="https://your-domain.com/success"
+                class="input-field"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>失败返回地址 (Cancel URL)</label>
+              <input 
+                v-model="transactionData.cancelUrl" 
+                type="text" 
+                placeholder="https://your-domain.com/cancel"
+                class="input-field"
+              />
+            </div>
           </div>
 
           <div class="form-group">
@@ -115,7 +245,651 @@
             />
           </div>
 
+          <div class="form-group">
+            <label>商品信息 (Goods) <span class="required">*</span></label>
+            <textarea 
+              v-model="transactionData.goods" 
+              placeholder='[{"name":"商品名称","quantity":1,"price":99.99,"link":"https://example.com/product"}]'
+              class="input-field textarea"
+              rows="5"
+            ></textarea>
+            <button @click="generateGoods" class="btn-small" style="margin-top: 0.3rem;">随机生成商品</button>
+            <small class="field-desc">请输入有效的JSON数组，每个商品必须包含 name, quantity, price, link 字段</small>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="section-header">
+            <h3>支付信息 (Payment Info)</h3>
+            <div class="section-header-actions">
+              <button 
+                @click="generatePaymentInfo" 
+                class="btn-small btn-random-section"
+                :disabled="!transactionData.enablePaymentInfo"
+              >
+                随机生成
+              </button>
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="transactionData.enablePaymentInfo" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">{{ transactionData.enablePaymentInfo ? '启用' : '禁用' }}</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-row-3" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
+            <div class="form-group">
+              <label>支付方式 (Payment Method)</label>
+              <select v-model="transactionData.paymentMethod" class="input-field" :disabled="!transactionData.enablePaymentInfo">
+                <option value="BANKCARD">BANKCARD - 银行卡</option>
+                <option value="ALIPAY">ALIPAY - 支付宝</option>
+                <option value="WECHATPAY">WECHATPAY - 微信支付</option>
+                <option value="APPLEPAY">APPLEPAY - Apple Pay</option>
+                <option value="GOOGLEPAY">GOOGLEPAY - Google Pay</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>购物者参考 (Shopper Reference)</label>
+              <input 
+                v-model="transactionData.shopperReference" 
+                type="text" 
+                placeholder="f4911bc8b17106a08f2f7a89a9fc4d11"
+                class="input-field"
+                :disabled="!transactionData.enablePaymentInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>持卡人邮箱 (Holder Email)</label>
+              <input 
+                v-model="transactionData.holderEmail" 
+                type="email" 
+                placeholder="zhangsan@test.com"
+                class="input-field"
+                :disabled="!transactionData.enablePaymentInfo"
+              />
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
+            <div class="form-group">
+              <label>卡号 (Card No)</label>
+              <input 
+                v-model="transactionData.cardNo" 
+                type="text" 
+                placeholder="4242424242424242"
+                class="input-field"
+                :disabled="!transactionData.enablePaymentInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>持卡人姓名 (Holder Name)</label>
+              <input 
+                v-model="transactionData.holderName" 
+                type="text" 
+                placeholder="Winifred Reopell"
+                class="input-field"
+                :disabled="!transactionData.enablePaymentInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>过期年份 (Exp Year)</label>
+              <input 
+                v-model="transactionData.expYear" 
+                type="text" 
+                placeholder="2029"
+                class="input-field"
+                :disabled="!transactionData.enablePaymentInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>过期月份 (Exp Month)</label>
+              <input 
+                v-model="transactionData.expMonth" 
+                type="text" 
+                placeholder="03"
+                class="input-field"
+                :disabled="!transactionData.enablePaymentInfo"
+              />
+            </div>
+          </div>
+          <div class="form-row-2" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
+            <div class="form-group">
+              <label>CVV</label>
+              <input 
+                v-model="transactionData.cvv" 
+                type="text" 
+                placeholder="123"
+                class="input-field"
+                :disabled="!transactionData.enablePaymentInfo"
+              />
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="section-header">
+            <h3>浏览器信息 (Browser Info)</h3>
+            <div class="section-header-actions">
+              <button 
+                @click="generateBrowserInfo" 
+                class="btn-small btn-random-section"
+                :disabled="!transactionData.enableBrowserInfo"
+              >
+                随机生成
+              </button>
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="transactionData.enableBrowserInfo" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">{{ transactionData.enableBrowserInfo ? '启用' : '禁用' }}</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-row-3" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
+            <div class="form-group">
+              <label>用户代理 (User Agent)</label>
+              <input 
+                v-model="transactionData.userAgent" 
+                type="text" 
+                placeholder="Mozilla/5.0 (Linux; U; Android 12.0.0; zh-cn; SONY-7XT78X Build/2DKKUF) AppleWebKit/537.36"
+                class="input-field"
+                :disabled="!transactionData.enableBrowserInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>颜色深度 (Color Depth)</label>
+              <input 
+                v-model="transactionData.colorDepth" 
+                type="text" 
+                placeholder="165"
+                class="input-field"
+                :disabled="!transactionData.enableBrowserInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>语言 (Language)</label>
+              <input 
+                v-model="transactionData.language" 
+                type="text" 
+                placeholder="ko-KR"
+                class="input-field"
+                :disabled="!transactionData.enableBrowserInfo"
+              />
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
+            <div class="form-group">
+              <label>Java 启用 (Java Enabled)</label>
+              <select v-model="transactionData.javaEnabled" class="input-field" :disabled="!transactionData.enableBrowserInfo">
+                <option :value="true">true</option>
+                <option :value="false">false</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>设备类型 (Device Type)</label>
+              <select v-model="transactionData.deviceType" class="input-field" :disabled="!transactionData.enableBrowserInfo">
+                <option value="PC">PC</option>
+                <option value="MOBILE">MOBILE</option>
+                <option value="TABLET">TABLET</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>终端类型 (Terminal Type)</label>
+              <select v-model="transactionData.terminalType" class="input-field" :disabled="!transactionData.enableBrowserInfo">
+                <option value="WEB">WEB</option>
+                <option value="APP">APP</option>
+                <option value="WAP">WAP</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>设备操作系统 (Device OS)</label>
+              <select v-model="transactionData.deviceOs" class="input-field" :disabled="!transactionData.enableBrowserInfo">
+                <option value="WINDOWS">WINDOWS</option>
+                <option value="MACOS">MACOS</option>
+                <option value="LINUX">LINUX</option>
+                <option value="ANDROID">ANDROID</option>
+                <option value="IOS">IOS</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
+            <div class="form-group">
+              <label>时区偏移 (Timezone Offset)</label>
+              <input 
+                v-model="transactionData.timezoneOffset" 
+                type="text" 
+                placeholder="-12:10"
+                class="input-field"
+                :disabled="!transactionData.enableBrowserInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>屏幕高度 (Screen Height)</label>
+              <input 
+                v-model="transactionData.screenHeight" 
+                type="text" 
+                placeholder="128"
+                class="input-field"
+                :disabled="!transactionData.enableBrowserInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>屏幕宽度 (Screen Width)</label>
+              <input 
+                v-model="transactionData.screenWidth" 
+                type="text" 
+                placeholder="255"
+                class="input-field"
+                :disabled="!transactionData.enableBrowserInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>设备指纹ID (Device Finger Print ID)</label>
+              <input 
+                v-model="transactionData.deviceFingerPrintId" 
+                type="text" 
+                placeholder="info.kbxqkxkzqgjmwj.qpxzwmwzbwwijkth"
+                class="input-field"
+                :disabled="!transactionData.enableBrowserInfo"
+              />
+            </div>
+          </div>
+          <div class="form-row-1" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
+            <div class="form-group">
+              <label>Cookies</label>
+              <textarea 
+                v-model="transactionData.cookies" 
+                type="text" 
+                placeholder="isg=BA4O1YD75-wYqlLAB-T9JZjXxxxJFHEUkjdslrlhj9 TB_TENANT_TYPE=organization"
+                class="input-field textarea"
+                rows="2"
+                :disabled="!transactionData.enableBrowserInfo"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="section-header">
+            <h3>客户信息 (Customer Info) <span class="required">*</span></h3>
+            <div class="section-header-actions">
+              <button 
+                @click="generateAllCustomerInfo" 
+                class="btn-small btn-random-section"
+                :disabled="!transactionData.enableCustomerInfo"
+              >
+                随机生成
+              </button>
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="transactionData.enableCustomerInfo" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">{{ transactionData.enableCustomerInfo ? '启用' : '禁用' }}</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableCustomerInfo }">
+            <div class="form-group">
+              <label>客户姓名 (Name) <span class="required">*</span></label>
+              <input 
+                v-model="transactionData.customerName" 
+                type="text" 
+                placeholder="Charlie Brown"
+                class="input-field"
+                :disabled="!transactionData.enableCustomerInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>客户邮箱 (Email) <span class="required">*</span></label>
+              <input 
+                v-model="transactionData.customerEmail" 
+                type="email" 
+                placeholder="charlie.brown2519@gmail.com"
+                class="input-field"
+                :disabled="!transactionData.enableCustomerInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>客户电话 (Phone) <span class="required">*</span></label>
+              <input 
+                v-model="transactionData.customerPhone" 
+                type="text" 
+                placeholder="+1 622 5406475"
+                class="input-field"
+                :disabled="!transactionData.enableCustomerInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>客户ID (ID) <span class="required">*</span></label>
+              <input 
+                v-model="transactionData.customerId" 
+                type="text" 
+                placeholder="CUST1766744364378"
+                class="input-field"
+                :disabled="!transactionData.enableCustomerInfo"
+              />
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableCustomerInfo }">
+            <div class="form-group">
+              <label>订单IP (Order IP) <span class="required">*</span></label>
+              <input 
+                v-model="transactionData.customerOrderIp" 
+                type="text" 
+                placeholder="183.238.13.170"
+                class="input-field"
+                :disabled="!transactionData.enableCustomerInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>支付IP (Pay IP) <span class="required">*</span></label>
+              <input 
+                v-model="transactionData.customerPayIp" 
+                type="text" 
+                placeholder="183.238.13.170"
+                class="input-field"
+                :disabled="!transactionData.enableCustomerInfo"
+              />
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="section-header">
+            <h3>账单信息 (Billing Info)</h3>
+            <div class="section-header-actions">
+              <button 
+                @click="generateAllBillInfo" 
+                class="btn-small btn-random-section"
+                :disabled="!transactionData.enableBillInfo"
+              >
+                随机生成
+              </button>
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="transactionData.enableBillInfo" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">{{ transactionData.enableBillInfo ? '启用' : '禁用' }}</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBillInfo }">
+            <div class="form-group">
+              <label>账单名 (First Name)</label>
+              <input 
+                v-model="transactionData.billFirstName" 
+                type="text" 
+                placeholder="First Name"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>账单姓 (Last Name)</label>
+              <input 
+                v-model="transactionData.billLastName" 
+                type="text" 
+                placeholder="Last Name"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>账单邮箱 (Email)</label>
+              <input 
+                v-model="transactionData.billEmail" 
+                type="email" 
+                placeholder="bill@example.com"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>账单电话 (Phone)</label>
+              <input 
+                v-model="transactionData.billPhone" 
+                type="text" 
+                placeholder="+1234567890"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBillInfo }">
+            <div class="form-group">
+              <label>账单地址 (Address Line1)</label>
+              <input 
+                v-model="transactionData.billAddressLine1" 
+                type="text" 
+                placeholder="Address Line 1"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>账单国家 (Country)</label>
+              <input 
+                v-model="transactionData.billCountry" 
+                type="text" 
+                list="bill-country-list"
+                placeholder="选择或输入国家代码"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+              <datalist id="bill-country-list">
+                <option value="CN">CN - 中国</option>
+                <option value="US">US - 美国</option>
+                <option value="GB">GB - 英国</option>
+                <option value="FR">FR - 法国</option>
+                <option value="JP">JP - 日本</option>
+                <option value="SG">SG - 新加坡</option>
+                <option value="HK">HK - 香港</option>
+                <option value="DE">DE - 德国</option>
+              </datalist>
+            </div>
+            <div class="form-group">
+              <label>账单州/省 (State)</label>
+              <input 
+                v-model="transactionData.billState" 
+                type="text" 
+                placeholder="State/Province"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>账单城市 (City)</label>
+              <input 
+                v-model="transactionData.billCity" 
+                type="text" 
+                placeholder="City"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBillInfo }">
+            <div class="form-group">
+              <label>账单邮编 (Postal Code)</label>
+              <input 
+                v-model="transactionData.billPostalCode" 
+                type="text" 
+                placeholder="Postal Code"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>区号 (Area Code)</label>
+              <input 
+                v-model="transactionData.billAreaCode" 
+                type="text" 
+                placeholder="Area Code"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>描述符 (Descriptor)</label>
+              <input 
+                v-model="transactionData.billDescriptor" 
+                type="text" 
+                placeholder="Descriptor"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>地址收集 (Address Collection)</label>
+              <input 
+                v-model="transactionData.billAddressCollection" 
+                type="text" 
+                list="bill-address-collection-list"
+                placeholder="选择或输入地址收集方式"
+                class="input-field"
+                :disabled="!transactionData.enableBillInfo"
+              />
+              <datalist id="bill-address-collection-list">
+                <option value="REQUIRED">REQUIRED - 必填</option>
+                <option value="AUTO">AUTO - 自动</option>
+              </datalist>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="section-header">
+            <h3>收货信息 (Shipping Info)</h3>
+            <div class="section-header-actions">
+              <button 
+                @click="generateAllShipInfo" 
+                class="btn-small btn-random-section"
+                :disabled="!transactionData.enableShipInfo"
+              >
+                随机生成
+              </button>
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="transactionData.enableShipInfo" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">{{ transactionData.enableShipInfo ? '启用' : '禁用' }}</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableShipInfo }">
+            <div class="form-group">
+              <label>收货名 (First Name)</label>
+              <input 
+                v-model="transactionData.shipFirstName" 
+                type="text" 
+                placeholder="First Name"
+                class="input-field"
+                :disabled="!transactionData.enableShipInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>收货姓 (Last Name)</label>
+              <input 
+                v-model="transactionData.shipLastName" 
+                type="text" 
+                placeholder="Last Name"
+                class="input-field"
+                :disabled="!transactionData.enableShipInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>收货邮箱 (Email)</label>
+              <input 
+                v-model="transactionData.shipEmail" 
+                type="email" 
+                placeholder="ship@example.com"
+                class="input-field"
+                :disabled="!transactionData.enableShipInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>收货电话 (Phone)</label>
+              <input 
+                v-model="transactionData.shipPhone" 
+                type="text" 
+                placeholder="+1234567890"
+                class="input-field"
+                :disabled="!transactionData.enableShipInfo"
+              />
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableShipInfo }">
+            <div class="form-group">
+              <label>收货地址 (Address Line1)</label>
+              <input 
+                v-model="transactionData.shipAddressLine1" 
+                type="text" 
+                placeholder="Address Line 1"
+                class="input-field"
+                :disabled="!transactionData.enableShipInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>收货国家 (Country)</label>
+              <input 
+                v-model="transactionData.shipCountry" 
+                type="text" 
+                list="ship-country-list"
+                placeholder="选择或输入国家代码"
+                class="input-field"
+                :disabled="!transactionData.enableShipInfo"
+              />
+              <datalist id="ship-country-list">
+                <option value="CN">CN - 中国</option>
+                <option value="US">US - 美国</option>
+                <option value="GB">GB - 英国</option>
+                <option value="FR">FR - 法国</option>
+                <option value="JP">JP - 日本</option>
+                <option value="SG">SG - 新加坡</option>
+                <option value="HK">HK - 香港</option>
+                <option value="DE">DE - 德国</option>
+              </datalist>
+            </div>
+            <div class="form-group">
+              <label>收货州/省 (State)</label>
+              <input 
+                v-model="transactionData.shipState" 
+                type="text" 
+                placeholder="State/Province"
+                class="input-field"
+                :disabled="!transactionData.enableShipInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>收货城市 (City)</label>
+              <input 
+                v-model="transactionData.shipCity" 
+                type="text" 
+                placeholder="City"
+                class="input-field"
+                :disabled="!transactionData.enableShipInfo"
+              />
+            </div>
+          </div>
+          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableShipInfo }">
+            <div class="form-group">
+              <label>收货邮编 (Postal Code)</label>
+              <input 
+                v-model="transactionData.shipPostalCode" 
+                type="text" 
+                placeholder="Postal Code"
+                class="input-field"
+                :disabled="!transactionData.enableShipInfo"
+              />
+            </div>
+            <div class="form-group">
+              <label>区号 (Area Code)</label>
+              <input 
+                v-model="transactionData.shipAreaCode" 
+                type="text" 
+                placeholder="Area Code"
+                class="input-field"
+                :disabled="!transactionData.enableShipInfo"
+              />
+            </div>
+          </div>
+
           <div class="button-group">
+            <button @click="generateAllRandom" class="btn-random">一键随机生成所有参数</button>
             <button @click="submitTransaction" :disabled="loading" class="btn-primary">
               {{ loading ? '处理中...' : '提交交易' }}
             </button>
@@ -219,38 +993,153 @@ import { payKKaApi } from '../services/paykkaApi'
 import { showError, showSuccess } from '../utils/toast'
 import { useNavigation } from '../composables/useNavigation'
 import { useMerchantConfig } from '../composables/useMerchantConfig'
+import { 
+  generateRandomIP,
+  generateRandomFirstName,
+  generateRandomLastName,
+  generateRandomEmail as generateRandomEmailUtil,
+  generateRandomPhone as generateRandomPhoneUtil,
+  generateRandomAddress as generateRandomAddressUtil,
+  generateRandomCountry as generateRandomCountryUtil,
+  generateRandomState as generateRandomStateUtil,
+  generateRandomCity as generateRandomCityUtil,
+  generateRandomPostalCode as generateRandomPostalCodeUtil,
+  generateRandomAreaCode as generateRandomAreaCodeUtil
+} from '../services/utils'
 
 const { goHome: goBack } = useNavigation()
 
 const loading = ref(false)
 
-// API配置
+// API配置 - 必须在 useMerchantConfig 之前定义
 const apiConfig = reactive({
-  baseUrl: 'https://api.paykka.com',
-  merchantId: '',
-  apiKey: ''
+  baseUrl: '', // 从商户配置中选择后自动填充
+  merchantId: '', // 从商户配置中选择后自动填充
+  appId: '', // 从商户配置中选择后自动填充
+  privateKey: '', // 从商户配置中选择后自动填充
+  apiKey: '' // 向后兼容，使用 privateKey
 })
 
 // 使用商户配置 composable
-const { merchantConfigs, selectedMerchantId, onMerchantChange, loadMerchantConfigs } = useMerchantConfig(apiConfig, { autoLoad: false })
+const { merchantConfigs, selectedMerchantId, onMerchantChange, loadMerchantConfigs } = useMerchantConfig(apiConfig)
 
-// 商户选择变化时，更新 apiKey
-watch(selectedMerchantId, () => {
-  if (selectedMerchantId.value) {
-    const config = merchantConfigs.value.find(c => c.merchantId === selectedMerchantId.value)
-    if (config) {
-      apiConfig.apiKey = config.privateKey // PayKKaApiTest使用apiKey，这里用privateKey填充
-    }
+// 商户选择变化时，同步 apiKey（向后兼容）
+watch(() => apiConfig.privateKey, (newVal) => {
+  apiConfig.apiKey = newVal
+}, { immediate: true })
+
+// 私钥展开/收起状态
+const showPrivateKeyFull = ref(false)
+
+// 生成默认过期时间（当前时间之后半小时）
+const getDefaultExpireTime = () => {
+  const now = new Date()
+  const expireTime = new Date(now.getTime() + 30 * 60 * 1000) // 加30分钟
+  
+  const year = expireTime.getFullYear()
+  const month = String(expireTime.getMonth() + 1).padStart(2, '0')
+  const day = String(expireTime.getDate()).padStart(2, '0')
+  const hours = String(expireTime.getHours()).padStart(2, '0')
+  const minutes = String(expireTime.getMinutes()).padStart(2, '0')
+  
+  // datetime-local 格式：YYYY-MM-DDTHH:mm
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+// 获取当前页面的基础URL
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol
+    const host = window.location.host
+    return `${protocol}//${host}`
   }
-})
+  return 'http://localhost:5173' // 开发环境默认值
+}
+
+// 生成默认成功返回地址
+const getDefaultReturnUrl = () => {
+  return `${getBaseUrl()}/payment/success`
+}
+
+// 生成默认失败返回地址
+const getDefaultCancelUrl = () => {
+  return `${getBaseUrl()}/payment/cancel`
+}
 
 const transactionData = reactive({
+  transId: '',
   orderNo: '',
   amount: 0,
   currency: 'USD',
+  paymentType: 'PURCHASE',
   transactionType: 'payment',
   description: '',
-  callbackUrl: ''
+  captureMethod: 'AUTOMATIC',
+  expireTime: getDefaultExpireTime(),
+  returnUrl: getDefaultReturnUrl(),
+  cancelUrl: getDefaultCancelUrl(),
+  callbackUrl: '',
+  addressCollection: 'AUTO',
+  // 开关控制
+  enableCustomerInfo: true,
+  enableBillInfo: true,
+  enableShipInfo: true,
+  customerName: '',
+  customerEmail: '',
+  customerPhone: '',
+  customerId: '',
+  customerOrderIp: '',
+  customerPayIp: '',
+  customer: '',
+  goods: '',
+  // 账单信息
+  billFirstName: '',
+  billLastName: '',
+  billEmail: '',
+  billPhone: '',
+  billAddressLine1: '',
+  billCountry: '',
+  billState: '',
+  billCity: '',
+  billPostalCode: '',
+  billAreaCode: '',
+  billDescriptor: '',
+  billAddressCollection: '',
+  // 收货信息
+  shipFirstName: '',
+  shipLastName: '',
+  shipEmail: '',
+  shipPhone: '',
+  shipAddressLine1: '',
+  shipCountry: '',
+  shipState: '',
+  shipCity: '',
+  shipPostalCode: '',
+  shipAreaCode: '',
+  // 支付信息
+  enablePaymentInfo: true,
+  paymentMethod: 'BANKCARD',
+  shopperReference: '',
+  cardNo: '',
+  expYear: '',
+  expMonth: '',
+  cvv: '',
+  holderName: '',
+  holderEmail: '',
+  // 浏览器信息
+  enableBrowserInfo: true,
+  userAgent: '',
+  colorDepth: '',
+  language: '',
+  javaEnabled: false,
+  deviceType: 'PC',
+  terminalType: 'WEB',
+  deviceOs: 'WINDOWS',
+  timezoneOffset: '',
+  screenHeight: '',
+  screenWidth: '',
+  cookies: '',
+  deviceFingerPrintId: ''
 })
 
 const result = ref(null)
@@ -260,11 +1149,313 @@ const isJsonCollapsed = ref(false)
 const editableJson = ref('')
 const isManuallyEditingJson = ref(false) // 标记用户是否正在手动编辑JSON
 
-// 生成订单号
-const generateOrderNo = () => {
+// 随机生成交易ID
+const generateTransId = () => {
   const timestamp = Date.now()
-  const random = Math.floor(Math.random() * 10000)
-  transactionData.orderNo = `PK${timestamp}${random}`
+  const random = Math.floor(Math.random() * 100000)
+  transactionData.transId = `TXN${timestamp}${random}`
+  // 同时更新 orderNo（用于向后兼容）
+  transactionData.orderNo = transactionData.transId
+}
+
+// 生成订单号（向后兼容）
+const generateOrderNo = () => {
+  generateTransId()
+}
+
+// 构建 customer JSON 对象（从表单字段）
+const buildCustomerJson = () => {
+  if (!transactionData.enableCustomerInfo) {
+    return ''
+  }
+  
+  const customerObj = {
+    name: transactionData.customerName || '',
+    email: transactionData.customerEmail || '',
+    phone: transactionData.customerPhone || '',
+    id: transactionData.customerId || '',
+    order_ip: transactionData.customerOrderIp || '',
+    pay_ip: transactionData.customerPayIp || ''
+  }
+  
+  // 只有当所有必填字段都有值时才返回 JSON
+  if (customerObj.name && customerObj.email && customerObj.phone && customerObj.id && customerObj.order_ip && customerObj.pay_ip) {
+    return JSON.stringify(customerObj, null, 2)
+  }
+  
+  return ''
+}
+
+// 监听客户信息字段变化，自动更新 customer JSON
+watch([
+  () => transactionData.customerName,
+  () => transactionData.customerEmail,
+  () => transactionData.customerPhone,
+  () => transactionData.customerId,
+  () => transactionData.customerOrderIp,
+  () => transactionData.customerPayIp,
+  () => transactionData.enableCustomerInfo
+], () => {
+  if (transactionData.enableCustomerInfo) {
+    transactionData.customer = buildCustomerJson()
+  } else {
+    transactionData.customer = ''
+  }
+}, { immediate: true })
+
+// 随机生成客户信息
+const generateCustomer = () => {
+  const firstName = generateRandomFirstName()
+  const lastName = generateRandomLastName()
+  const fullName = `${firstName} ${lastName}`
+  const email = generateRandomEmailUtil(fullName.toLowerCase().replace(' ', '.'))
+  const phone = generateRandomPhoneUtil('us')
+  
+  // 生成订单IP和支付IP（用于customer对象中的order_ip和pay_ip字段）
+  const orderIp = generateRandomIP()
+  const payIp = generateRandomIP()
+  
+  transactionData.customerName = fullName
+  transactionData.customerEmail = email
+  transactionData.customerPhone = phone
+  transactionData.customerId = `CUST${Date.now()}`
+  transactionData.customerOrderIp = orderIp
+  transactionData.customerPayIp = payIp
+  
+  // customer JSON 会通过 watch 自动更新
+}
+
+// 随机生成商品信息
+const generateGoods = () => {
+  const products = [
+    { name: 'Laptop', price: 999.99, link: 'https://example.com/products/laptop' },
+    { name: 'Smartphone', price: 699.99, link: 'https://example.com/products/smartphone' },
+    { name: 'Tablet', price: 399.99, link: 'https://example.com/products/tablet' },
+    { name: 'Headphones', price: 199.99, link: 'https://example.com/products/headphones' },
+    { name: 'Keyboard', price: 79.99, link: 'https://example.com/products/keyboard' }
+  ]
+  
+  const selectedProducts = []
+  const count = Math.floor(Math.random() * 3) + 1 // 1-3个商品
+  for (let i = 0; i < count; i++) {
+    const product = products[Math.floor(Math.random() * products.length)]
+    selectedProducts.push({
+      name: product.name,
+      quantity: Math.floor(Math.random() * 3) + 1,
+      price: product.price,
+      link: product.link // 必填字段，不能为null
+    })
+  }
+  
+  transactionData.goods = JSON.stringify(selectedProducts, null, 2)
+}
+
+// 随机生成金额
+const generateRandomAmount = () => {
+  const min = 1
+  const max = 10000
+  const decimals = 2
+  transactionData.amount = parseFloat((Math.random() * (max - min) + min).toFixed(decimals))
+}
+
+// 随机生成币种
+const generateRandomCurrency = () => {
+  const currencies = ['USD', 'EUR', 'GBP', 'CNY', 'JPY', 'HKD', 'SGD']
+  transactionData.currency = currencies[Math.floor(Math.random() * currencies.length)]
+}
+
+// 随机生成商品描述
+const generateRandomDescription = () => {
+  const descriptions = [
+    '电子产品购买',
+    '在线课程订阅',
+    '软件服务费用',
+    '商品购买订单',
+    '服务费用支付',
+    '会员订阅费用',
+    '数字产品购买',
+    '在线服务费用'
+  ]
+  transactionData.description = descriptions[Math.floor(Math.random() * descriptions.length)]
+}
+
+// 批量生成所有客户信息
+const generateAllCustomerInfo = () => {
+  generateCustomer()
+}
+
+// 批量生成所有账单信息
+const generateAllBillInfo = () => {
+  transactionData.billFirstName = generateRandomFirstName()
+  transactionData.billLastName = generateRandomLastName()
+  transactionData.billEmail = generateRandomEmailUtil('bill')
+  transactionData.billPhone = generateRandomPhoneUtil('us')
+  transactionData.billAddressLine1 = generateRandomAddressUtil('en')
+  transactionData.billCountry = generateRandomCountryUtil()
+  transactionData.billState = generateRandomStateUtil(transactionData.billCountry || 'US')
+  transactionData.billCity = generateRandomCityUtil(transactionData.billCountry || 'US')
+  transactionData.billPostalCode = generateRandomPostalCodeUtil()
+  transactionData.billAreaCode = generateRandomAreaCodeUtil(transactionData.billCountry || 'CN')
+  transactionData.billDescriptor = `DESC${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+  const options = ['REQUIRED', 'AUTO']
+  transactionData.billAddressCollection = options[Math.floor(Math.random() * options.length)]
+}
+
+// 批量生成所有收货信息
+const generateAllShipInfo = () => {
+  transactionData.shipFirstName = generateRandomFirstName()
+  transactionData.shipLastName = generateRandomLastName()
+  transactionData.shipEmail = generateRandomEmailUtil('ship')
+  transactionData.shipPhone = generateRandomPhoneUtil('fr')
+  transactionData.shipAddressLine1 = generateRandomAddressUtil('en')
+  transactionData.shipCountry = generateRandomCountryUtil()
+  transactionData.shipState = generateRandomStateUtil(transactionData.shipCountry || 'FR')
+  transactionData.shipCity = generateRandomCityUtil(transactionData.shipCountry || 'FR')
+  transactionData.shipPostalCode = generateRandomPostalCodeUtil()
+  transactionData.shipAreaCode = generateRandomAreaCodeUtil(transactionData.shipCountry || 'FR')
+}
+
+// 随机生成支付信息
+const generatePaymentInfo = () => {
+  // 生成购物者参考（32位十六进制字符串）
+  const chars = '0123456789abcdef'
+  let shopperRef = ''
+  for (let i = 0; i < 32; i++) {
+    shopperRef += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  transactionData.shopperReference = shopperRef
+  
+  // 生成测试卡号（Visa测试卡号）
+  const testCards = [
+    '4242424242424242',
+    '4000000000000002',
+    '4000000000009995',
+    '5555555555554444'
+  ]
+  transactionData.cardNo = testCards[Math.floor(Math.random() * testCards.length)]
+  
+  // 生成过期年份（当前年份+1到+10）
+  const currentYear = new Date().getFullYear()
+  const expYear = currentYear + Math.floor(Math.random() * 10) + 1
+  transactionData.expYear = String(expYear)
+  
+  // 生成过期月份（01-12）
+  const expMonth = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')
+  transactionData.expMonth = expMonth
+  
+  // 生成CVV（3位数字）
+  transactionData.cvv = String(Math.floor(Math.random() * 900) + 100)
+  
+  // 生成持卡人姓名
+  const firstName = generateRandomFirstName()
+  const lastName = generateRandomLastName()
+  transactionData.holderName = `${firstName} ${lastName}`
+  
+  // 生成持卡人邮箱
+  transactionData.holderEmail = generateRandomEmailUtil(firstName.toLowerCase() + '.' + lastName.toLowerCase())
+}
+
+// 随机生成浏览器信息
+const generateBrowserInfo = () => {
+  // 生成 User Agent
+  const userAgents = [
+    'Mozilla/5.0 (Linux; U; Android 12.0.0; zh-cn; SONY-7XT78X Build/2DKKUF) AppleWebKit/537.36 (KHTML, like Gecko)Version/4.0 Chrome/74.0.3729.157 Mobile Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+  ]
+  transactionData.userAgent = userAgents[Math.floor(Math.random() * userAgents.length)]
+  
+  // 生成颜色深度（常见值：16, 24, 32）
+  const colorDepths = ['16', '24', '32', '165']
+  transactionData.colorDepth = colorDepths[Math.floor(Math.random() * colorDepths.length)]
+  
+  // 生成语言
+  const languages = ['ko-KR', 'en-US', 'zh-CN', 'ja-JP', 'fr-FR', 'de-DE']
+  transactionData.language = languages[Math.floor(Math.random() * languages.length)]
+  
+  // Java 启用（随机 true/false）
+  transactionData.javaEnabled = Math.random() > 0.5
+  
+  // 设备类型
+  const deviceTypes = ['PC', 'MOBILE', 'TABLET']
+  transactionData.deviceType = deviceTypes[Math.floor(Math.random() * deviceTypes.length)]
+  
+  // 终端类型
+  transactionData.terminalType = 'WEB'
+  
+  // 设备操作系统
+  const deviceOsList = ['WINDOWS', 'MACOS', 'LINUX', 'ANDROID', 'IOS']
+  transactionData.deviceOs = deviceOsList[Math.floor(Math.random() * deviceOsList.length)]
+  
+  // 生成时区偏移（-12:00 到 +14:00）
+  const hours = Math.floor(Math.random() * 27) - 12 // -12 到 +14
+  const minutes = Math.floor(Math.random() * 60)
+  const sign = hours >= 0 ? '+' : '-'
+  transactionData.timezoneOffset = `${sign}${Math.abs(hours).toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+  
+  // 生成屏幕尺寸
+  const screenSizes = [
+    { width: '1920', height: '1080' },
+    { width: '1366', height: '768' },
+    { width: '128', height: '255' },
+    { width: '375', height: '667' },
+    { width: '414', height: '896' }
+  ]
+  const screenSize = screenSizes[Math.floor(Math.random() * screenSizes.length)]
+  transactionData.screenWidth = screenSize.width
+  transactionData.screenHeight = screenSize.height
+  
+  // 生成 Cookies
+  const cookieValues = [
+    'isg=BA4O1YD75-wYqlLAB-T9JZjXxxxJFHEUkjdslrlhj9 TB_TENANT_TYPE=organization',
+    'session_id=abc123def456; user_pref=dark_mode',
+    'csrf_token=xyz789; lang=en-US'
+  ]
+  transactionData.cookies = cookieValues[Math.floor(Math.random() * cookieValues.length)]
+  
+  // 生成设备指纹ID
+  const chars = 'abcdefghijklmnopqrstuvwxyz.'
+  let fingerPrintId = 'info.'
+  for (let i = 0; i < 15; i++) {
+    fingerPrintId += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  fingerPrintId += '.'
+  for (let i = 0; i < 20; i++) {
+    fingerPrintId += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  transactionData.deviceFingerPrintId = fingerPrintId
+}
+
+// 一键随机生成所有参数
+const generateAllRandom = () => {
+  generateRandomAmount()
+  generateRandomCurrency()
+  generateRandomDescription()
+  generateAllCustomerInfo()
+  generateTransId()
+  generateGoods()
+  // 如果账单信息开关启用，则生成账单信息（与浏览器信息逻辑保持一致）
+  if (transactionData.enableBillInfo) {
+    generateAllBillInfo()
+  }
+  // 如果收货信息开关启用，则生成收货信息
+  if (transactionData.enableShipInfo) {
+    generateAllShipInfo()
+  }
+  // 如果支付信息开关启用，则生成支付信息
+  if (transactionData.enablePaymentInfo) {
+    generatePaymentInfo()
+  }
+  // 如果浏览器信息开关启用，则生成浏览器信息
+  if (transactionData.enableBrowserInfo) {
+    generateBrowserInfo()
+  }
+  // 保持过期时间为默认值（当前时间之后半小时），不随机生成
+  transactionData.expireTime = getDefaultExpireTime()
+  // 注意：addressCollection 不参与随机生成，保持用户设置的值或默认值 'AUTO'
+  transactionData.returnUrl = getDefaultReturnUrl()
+  transactionData.cancelUrl = getDefaultCancelUrl()
 }
 
 // 格式化JSON
@@ -273,18 +1464,208 @@ const formatJson = (obj) => {
   return JSON.stringify(obj, null, 2)
 }
 
+// 生成请求参数的辅助函数
+const buildRequestParams = () => {
+  try {
+    // 解析JSON数据
+    let customerObj = null
+    let goodsObj = null
+    
+    // 从表单字段构建 customer 对象
+    if (transactionData.enableCustomerInfo) {
+      if (transactionData.customerName && transactionData.customerEmail && 
+          transactionData.customerPhone && transactionData.customerId && 
+          transactionData.customerOrderIp && transactionData.customerPayIp) {
+        customerObj = {
+          name: transactionData.customerName.trim(),
+          email: transactionData.customerEmail.trim(),
+          phone: transactionData.customerPhone.trim(),
+          id: transactionData.customerId.trim(),
+          order_ip: transactionData.customerOrderIp.trim(),
+          pay_ip: transactionData.customerPayIp.trim()
+        }
+      }
+    }
+    
+    if (transactionData.goods) {
+      try {
+        goodsObj = JSON.parse(transactionData.goods)
+      } catch (e) {
+        goodsObj = { error: 'JSON格式错误' }
+      }
+    }
+    
+    // 构建地址信息对象的辅助函数
+    const buildAddressObject = (prefix) => {
+      const obj = {}
+      const fieldMap = {
+        FirstName: 'first_name',
+        LastName: 'last_name',
+        Email: 'email',
+        Phone: 'phone_number',
+        AddressLine1: 'address_line1',
+        Country: 'country',
+        State: 'state',
+        City: 'city',
+        PostalCode: 'postal_code',
+        AreaCode: 'area_code'
+      }
+      
+      for (const [key, snakeKey] of Object.entries(fieldMap)) {
+        const value = transactionData[`${prefix}${key}`]
+        if (value) obj[snakeKey] = value
+      }
+      
+      if (prefix === 'bill') {
+        if (transactionData.billDescriptor) obj.descriptor = transactionData.billDescriptor
+        if (transactionData.billAddressCollection) obj.billing_address_collection = transactionData.billAddressCollection
+      }
+      
+      return Object.keys(obj).length > 0 ? obj : null
+    }
+    
+    // 构建支付信息对象的辅助函数（与账单信息逻辑保持一致）
+    const buildPaymentObject = () => {
+      const obj = {}
+      // payment_method 是必填字段，必须包含
+      if (transactionData.paymentMethod) {
+        obj.payment_method = transactionData.paymentMethod
+      } else {
+        obj.payment_method = 'BANKCARD' // 默认值
+      }
+      
+      // 其他可选字段
+      if (transactionData.shopperReference) obj.shopper_reference = transactionData.shopperReference
+      if (transactionData.cardNo) obj.card_no = transactionData.cardNo
+      if (transactionData.expYear) obj.exp_year = transactionData.expYear
+      if (transactionData.expMonth) obj.exp_month = transactionData.expMonth
+      if (transactionData.cvv) obj.cvv = transactionData.cvv
+      if (transactionData.holderName) obj.holder_name = transactionData.holderName
+      if (transactionData.holderEmail) obj.holder_email = transactionData.holderEmail
+      
+      // payment 对象必须存在（至少包含 payment_method），所以总是返回对象
+      return obj
+    }
+    
+    // 构建浏览器信息对象的辅助函数（与账单信息逻辑保持一致）
+    const buildBrowserObject = () => {
+      const obj = {}
+      if (transactionData.userAgent) obj.user_agent = transactionData.userAgent
+      if (transactionData.colorDepth) obj.color_depth = transactionData.colorDepth
+      if (transactionData.language) obj.language = transactionData.language
+      if (transactionData.javaEnabled !== undefined && transactionData.javaEnabled !== null) {
+        obj.java_enabled = transactionData.javaEnabled
+      }
+      if (transactionData.deviceType) obj.device_type = transactionData.deviceType
+      if (transactionData.terminalType) obj.terminal_type = transactionData.terminalType
+      if (transactionData.deviceOs) obj.device_os = transactionData.deviceOs
+      if (transactionData.timezoneOffset) obj.timezone_offset = transactionData.timezoneOffset
+      if (transactionData.screenHeight) obj.screen_height = transactionData.screenHeight
+      if (transactionData.screenWidth) obj.screen_width = transactionData.screenWidth
+      if (transactionData.cookies) obj.cookies = transactionData.cookies
+      if (transactionData.deviceFingerPrintId) obj.device_finger_print_id = transactionData.deviceFingerPrintId
+      
+      return Object.keys(obj).length > 0 ? obj : null
+    }
+    
+    // 构建请求参数
+    const params = {
+      merchant_id: apiConfig.merchantId || '(未填写)',
+      trans_id: transactionData.transId || transactionData.orderNo || '(未填写)',
+      orderNo: transactionData.orderNo || transactionData.transId || '(未填写，将自动生成)',
+      amount: transactionData.amount || 0,
+      currency: transactionData.currency || 'USD',
+      payment_type: transactionData.paymentType || 'PURCHASE',
+      transactionType: transactionData.transactionType || 'payment',
+      description: transactionData.description || '(未填写)',
+      capture_method: transactionData.captureMethod || 'AUTOMATIC',
+      expire_time: transactionData.expireTime ? formatExpireTime(transactionData.expireTime) : '(未填写)',
+      address_collection: transactionData.addressCollection || 'AUTO',
+      return_url: transactionData.returnUrl || '(未填写)',
+      cancel_url: transactionData.cancelUrl || '(未填写)',
+      callbackUrl: transactionData.callbackUrl || '(未填写)',
+      goods: goodsObj || '(未填写)'
+    }
+    
+    // 只有当客户信息开关启用时，才添加客户信息字段和 customer 对象
+    if (transactionData.enableCustomerInfo) {
+      if (customerObj) {
+        params.customer = customerObj
+      }
+    }
+    
+    // 构建账单信息对象（bill）- 只有当开关启用时才构建
+    if (transactionData.enableBillInfo) {
+      const billObj = buildAddressObject('bill')
+      if (billObj) {
+        params.bill = billObj
+      }
+    }
+    
+    // 构建收货信息对象（shipping）- 只有当开关启用时才构建
+    if (transactionData.enableShipInfo) {
+      const shipObj = buildAddressObject('ship')
+      if (shipObj) {
+        params.shipping = shipObj
+      }
+    }
+    
+    // 构建支付信息对象（payment）- 只有当开关启用时才构建
+    if (transactionData.enablePaymentInfo) {
+      const paymentObj = buildPaymentObject()
+      if (paymentObj) {
+        params.payment = paymentObj
+      }
+    }
+    
+    // 构建浏览器信息对象（browser）- 只有当开关启用时才构建
+    if (transactionData.enableBrowserInfo) {
+      const browserObj = buildBrowserObject()
+      if (browserObj) {
+        params.browser = browserObj
+      }
+    }
+    
+    return params
+  } catch (error) {
+    return { error: `生成JSON时出错: ${error.message}` }
+  }
+}
+
+// 格式化过期时间：将 datetime-local 格式转换为 API 需要的格式
+const formatExpireTime = (timeStr) => {
+  if (!timeStr || timeStr.trim() === '') return ''
+  
+  // 如果已经是正确格式（包含时区），直接返回
+  const timezonePattern = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}/
+  if (timezonePattern.test(timeStr)) {
+    return timeStr
+  }
+  
+  // 如果是 datetime-local 格式（"2023-11-24T11:34"），转换为 API 格式
+  try {
+    const date = new Date(timeStr)
+    if (isNaN(date.getTime())) {
+      return timeStr
+    }
+    
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    
+    // 默认使用 +0800 时区（中国标准时间）
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+0800`
+  } catch (e) {
+    return timeStr
+  }
+}
+
 // 计算生成的请求参数JSON
 const requestParamsJson = computed(() => {
-  const params = {
-    merchantId: apiConfig.merchantId || '(未填写)',
-    orderNo: transactionData.orderNo || '(未填写，将自动生成)',
-    amount: transactionData.amount || 0,
-    currency: transactionData.currency || 'USD',
-    transactionType: transactionData.transactionType || 'payment',
-    description: transactionData.description || '(未填写)',
-    callbackUrl: transactionData.callbackUrl || '(未填写)',
-    timestamp: Date.now()
-  }
+  const params = buildRequestParams()
   return formatJson(params)
 })
 
@@ -326,7 +1707,10 @@ const updateFormFromJson = () => {
     
     const params = JSON.parse(jsonText)
     
-    // 更新表单字段
+    // 更新基本字段
+    if (params.trans_id && params.trans_id !== '(未填写)') {
+      transactionData.transId = params.trans_id
+    }
     if (params.orderNo && params.orderNo !== '(未填写，将自动生成)') {
       transactionData.orderNo = params.orderNo
     }
@@ -336,17 +1720,130 @@ const updateFormFromJson = () => {
     if (params.currency && params.currency !== '(未填写)') {
       transactionData.currency = params.currency
     }
+    if (params.payment_type && params.payment_type !== '(未填写)') {
+      transactionData.paymentType = params.payment_type
+    }
     if (params.transactionType && params.transactionType !== '(未填写)') {
       transactionData.transactionType = params.transactionType
     }
     if (params.description && params.description !== '(未填写)') {
       transactionData.description = params.description
     }
+    if (params.capture_method && params.capture_method !== '(未填写)') {
+      transactionData.captureMethod = params.capture_method
+    }
+    if (params.expire_time && params.expire_time !== '(未填写)') {
+      transactionData.expireTime = params.expire_time
+    }
+    if (params.address_collection && params.address_collection !== '(未填写)') {
+      transactionData.addressCollection = params.address_collection
+    }
+    if (params.return_url && params.return_url !== '(未填写)') {
+      transactionData.returnUrl = params.return_url
+    }
+    if (params.cancel_url && params.cancel_url !== '(未填写)') {
+      transactionData.cancelUrl = params.cancel_url
+    }
     if (params.callbackUrl && params.callbackUrl !== '(未填写)') {
       transactionData.callbackUrl = params.callbackUrl
     }
-    if (params.merchantId && params.merchantId !== '(未填写)') {
-      apiConfig.merchantId = params.merchantId
+    if (params.merchant_id && params.merchant_id !== '(未填写)') {
+      apiConfig.merchantId = params.merchant_id
+    }
+    
+    // 更新商品信息
+    if (params.goods && params.goods !== '(未填写)' && !params.goods.error) {
+      transactionData.goods = formatJson(params.goods)
+    }
+    
+    // 更新客户信息
+    if (params.customer && !params.customer.error) {
+      transactionData.enableCustomerInfo = true
+      if (params.customer.name) transactionData.customerName = params.customer.name
+      if (params.customer.email) transactionData.customerEmail = params.customer.email
+      if (params.customer.phone) transactionData.customerPhone = params.customer.phone
+      if (params.customer.id) transactionData.customerId = params.customer.id
+      if (params.customer.order_ip) transactionData.customerOrderIp = params.customer.order_ip
+      if (params.customer.pay_ip) transactionData.customerPayIp = params.customer.pay_ip
+      // customer JSON 会通过 watch 自动更新
+    }
+    
+    // 更新账单信息
+    if (params.bill) {
+      transactionData.enableBillInfo = true
+      const fieldMap = {
+        first_name: 'FirstName',
+        last_name: 'LastName',
+        email: 'Email',
+        phone_number: 'Phone',
+        address_line1: 'AddressLine1',
+        country: 'Country',
+        state: 'State',
+        city: 'City',
+        postal_code: 'PostalCode',
+        area_code: 'AreaCode'
+      }
+      for (const [snakeKey, key] of Object.entries(fieldMap)) {
+        if (params.bill[snakeKey]) {
+          transactionData[`bill${key}`] = params.bill[snakeKey]
+        }
+      }
+      if (params.bill.descriptor) transactionData.billDescriptor = params.bill.descriptor
+      if (params.bill.billing_address_collection) transactionData.billAddressCollection = params.bill.billing_address_collection
+    }
+    
+    // 更新收货信息
+    if (params.shipping) {
+      transactionData.enableShipInfo = true
+      const fieldMap = {
+        first_name: 'FirstName',
+        last_name: 'LastName',
+        email: 'Email',
+        phone_number: 'Phone',
+        address_line1: 'AddressLine1',
+        country: 'Country',
+        state: 'State',
+        city: 'City',
+        postal_code: 'PostalCode',
+        area_code: 'AreaCode'
+      }
+      for (const [snakeKey, key] of Object.entries(fieldMap)) {
+        if (params.shipping[snakeKey]) {
+          transactionData[`ship${key}`] = params.shipping[snakeKey]
+        }
+      }
+    }
+    
+    // 更新支付信息
+    if (params.payment) {
+      transactionData.enablePaymentInfo = true
+      if (params.payment.payment_method) transactionData.paymentMethod = params.payment.payment_method
+      if (params.payment.shopper_reference) transactionData.shopperReference = params.payment.shopper_reference
+      if (params.payment.card_no) transactionData.cardNo = params.payment.card_no
+      if (params.payment.exp_year) transactionData.expYear = params.payment.exp_year
+      if (params.payment.exp_month) transactionData.expMonth = params.payment.exp_month
+      if (params.payment.cvv) transactionData.cvv = params.payment.cvv
+      if (params.payment.holder_name) transactionData.holderName = params.payment.holder_name
+      if (params.payment.holder_email) transactionData.holderEmail = params.payment.holder_email
+    }
+    
+    // 更新浏览器信息
+    if (params.browser) {
+      transactionData.enableBrowserInfo = true
+      if (params.browser.user_agent) transactionData.userAgent = params.browser.user_agent
+      if (params.browser.color_depth) transactionData.colorDepth = params.browser.color_depth
+      if (params.browser.language) transactionData.language = params.browser.language
+      if (params.browser.java_enabled !== undefined && params.browser.java_enabled !== null) {
+        transactionData.javaEnabled = params.browser.java_enabled
+      }
+      if (params.browser.device_type) transactionData.deviceType = params.browser.device_type
+      if (params.browser.terminal_type) transactionData.terminalType = params.browser.terminal_type
+      if (params.browser.device_os) transactionData.deviceOs = params.browser.device_os
+      if (params.browser.timezone_offset) transactionData.timezoneOffset = params.browser.timezone_offset
+      if (params.browser.screen_height) transactionData.screenHeight = params.browser.screen_height
+      if (params.browser.screen_width) transactionData.screenWidth = params.browser.screen_width
+      if (params.browser.cookies) transactionData.cookies = params.browser.cookies
+      if (params.browser.device_finger_print_id) transactionData.deviceFingerPrintId = params.browser.device_finger_print_id
     }
     
     // 同步更新 editableJson，并清除手动编辑标记
@@ -418,12 +1915,84 @@ const copyJson = async () => {
 
 // 重置表单
 const resetForm = () => {
+  transactionData.transId = ''
   transactionData.orderNo = ''
   transactionData.amount = 0
   transactionData.currency = 'USD'
+  transactionData.paymentType = 'PURCHASE'
   transactionData.transactionType = 'payment'
   transactionData.description = ''
+  transactionData.captureMethod = 'AUTOMATIC'
+  transactionData.expireTime = getDefaultExpireTime()
+  transactionData.addressCollection = 'AUTO'
+  transactionData.returnUrl = getDefaultReturnUrl()
+  transactionData.cancelUrl = getDefaultCancelUrl()
   transactionData.callbackUrl = ''
+  // 重置开关
+  transactionData.enableCustomerInfo = true
+  transactionData.enableBillInfo = true
+  transactionData.enableShipInfo = true
+  transactionData.customerName = ''
+  transactionData.customerEmail = ''
+  transactionData.customerPhone = ''
+  transactionData.customerId = ''
+  transactionData.customerOrderIp = ''
+  transactionData.customerPayIp = ''
+  transactionData.customer = ''
+  transactionData.goods = ''
+  
+  // 账单信息
+  transactionData.billFirstName = ''
+  transactionData.billLastName = ''
+  transactionData.billEmail = ''
+  transactionData.billPhone = ''
+  transactionData.billAddressLine1 = ''
+  transactionData.billCountry = ''
+  transactionData.billState = ''
+  transactionData.billCity = ''
+  transactionData.billPostalCode = ''
+  transactionData.billAreaCode = ''
+  transactionData.billDescriptor = ''
+  transactionData.billAddressCollection = ''
+  
+  // 收货信息
+  transactionData.shipFirstName = ''
+  transactionData.shipLastName = ''
+  transactionData.shipEmail = ''
+  transactionData.shipPhone = ''
+  transactionData.shipAddressLine1 = ''
+  transactionData.shipCountry = ''
+  transactionData.shipState = ''
+  transactionData.shipCity = ''
+  transactionData.shipPostalCode = ''
+  transactionData.shipAreaCode = ''
+  
+  // 支付信息
+  transactionData.enablePaymentInfo = true
+  transactionData.paymentMethod = 'BANKCARD'
+  transactionData.shopperReference = ''
+  transactionData.cardNo = ''
+  transactionData.expYear = ''
+  transactionData.expMonth = ''
+  transactionData.cvv = ''
+  transactionData.holderName = ''
+  transactionData.holderEmail = ''
+  
+  // 浏览器信息
+  transactionData.enableBrowserInfo = true
+  transactionData.userAgent = ''
+  transactionData.colorDepth = ''
+  transactionData.language = ''
+  transactionData.javaEnabled = false
+  transactionData.deviceType = 'PC'
+  transactionData.terminalType = 'WEB'
+  transactionData.deviceOs = 'WINDOWS'
+  transactionData.timezoneOffset = ''
+  transactionData.screenHeight = ''
+  transactionData.screenWidth = ''
+  transactionData.cookies = ''
+  transactionData.deviceFingerPrintId = ''
+  
   result.value = null
 }
 
@@ -453,16 +2022,96 @@ const testConnection = async () => {
   }
 }
 
-// 提交交易
-const submitTransaction = async () => {
-  // 验证必填字段
-  if (!apiConfig.merchantId || !apiConfig.apiKey) {
-    showError('请填写商户ID和API密钥')
-    return
+// 验证JSON数据
+const validateJsonData = () => {
+  let customerObj = null
+  let goodsObj = null
+  
+  // 只有当客户信息开关启用时，才验证客户信息字段
+  if (transactionData.enableCustomerInfo) {
+    // 验证必填字段
+    if (!transactionData.customerName || transactionData.customerName.trim() === '') {
+      showError('客户姓名 (Name) 不能为空')
+      return null
+    }
+    if (!transactionData.customerEmail || transactionData.customerEmail.trim() === '') {
+      showError('客户邮箱 (Email) 不能为空')
+      return null
+    }
+    if (!transactionData.customerPhone || transactionData.customerPhone.trim() === '') {
+      showError('客户电话 (Phone) 不能为空')
+      return null
+    }
+    if (!transactionData.customerId || transactionData.customerId.trim() === '') {
+      showError('客户ID (ID) 不能为空')
+      return null
+    }
+    if (!transactionData.customerOrderIp || transactionData.customerOrderIp.trim() === '') {
+      showError('订单IP (Order IP) 不能为空')
+      return null
+    }
+    if (!transactionData.customerPayIp || transactionData.customerPayIp.trim() === '') {
+      showError('支付IP (Pay IP) 不能为空')
+      return null
+    }
+    
+    // 构建 customer 对象
+    customerObj = {
+      name: transactionData.customerName.trim(),
+      email: transactionData.customerEmail.trim(),
+      phone: transactionData.customerPhone.trim(),
+      id: transactionData.customerId.trim(),
+      order_ip: transactionData.customerOrderIp.trim(),
+      pay_ip: transactionData.customerPayIp.trim()
+    }
   }
 
-  if (!transactionData.orderNo) {
-    generateOrderNo()
+  try {
+    goodsObj = JSON.parse(transactionData.goods)
+    // 验证 goods[0].link 不能为null
+    if (!Array.isArray(goodsObj) || goodsObj.length === 0) {
+      showError('商品信息 (Goods) 必须是一个非空数组')
+      return null
+    }
+    for (let i = 0; i < goodsObj.length; i++) {
+      if (goodsObj[i].link === null || goodsObj[i].link === undefined) {
+        showError(`商品信息 (Goods) 中第 ${i + 1} 个商品的 link 字段不能为null`)
+        return null
+      }
+    }
+  } catch (e) {
+    showError('商品信息 (Goods) 格式错误，请输入有效的JSON')
+    return null
+  }
+  
+  return { customerObj, goodsObj }
+}
+
+// 验证商户配置
+const validateMerchantConfig = () => {
+  if (!selectedMerchantId.value) {
+    showError('请先选择商户配置')
+    return false
+  }
+  
+  if (!apiConfig.baseUrl || !apiConfig.merchantId || !apiConfig.privateKey || !apiConfig.appId) {
+    showError('商户配置不完整，请检查商户配置或重新选择')
+    return false
+  }
+  return true
+}
+
+// 提交交易
+const submitTransaction = async () => {
+  // 验证商户配置
+  if (!validateMerchantConfig()) return
+
+  if (!transactionData.transId && !transactionData.orderNo) {
+    generateTransId()
+  } else if (!transactionData.transId) {
+    transactionData.transId = transactionData.orderNo
+  } else if (!transactionData.orderNo) {
+    transactionData.orderNo = transactionData.transId
   }
 
   if (!transactionData.amount || transactionData.amount <= 0) {
@@ -470,31 +2119,158 @@ const submitTransaction = async () => {
     return
   }
 
+  // 验证JSON格式和必填字段
+  const jsonData = validateJsonData()
+  if (!jsonData) return
+  
+  const { customerObj, goodsObj } = jsonData
+
   loading.value = true
 
   try {
+    // 构建请求数据（使用下划线命名，与 PayKKaCheckoutBase 保持一致）
     const requestData = {
-      merchantId: apiConfig.merchantId,
-      orderNo: transactionData.orderNo,
+      transId: transactionData.transId || transactionData.orderNo,
       amount: transactionData.amount,
       currency: transactionData.currency,
-      transactionType: transactionData.transactionType,
-      description: transactionData.description,
-      callbackUrl: transactionData.callbackUrl,
-      timestamp: Date.now()
+      paymentType: transactionData.paymentType || 'PURCHASE',
+      description: transactionData.description || `订单 ${transactionData.transId || transactionData.orderNo}`,
+      captureMethod: transactionData.captureMethod || 'AUTOMATIC',
+      expireTime: transactionData.expireTime ? formatExpireTime(transactionData.expireTime) : '',
+      addressCollection: transactionData.addressCollection || 'AUTO',
+      returnUrl: transactionData.returnUrl || '',
+      cancelUrl: transactionData.cancelUrl || ''
     }
 
+    // 只有当客户信息开关启用时，才添加客户信息字段和 customer 对象
+    if (transactionData.enableCustomerInfo && customerObj) {
+      requestData.customer = customerObj
+    }
+
+    // 添加商品信息
+    if (goodsObj) {
+      requestData.goods = goodsObj
+    }
+
+    // 构建地址信息对象的辅助函数
+    const buildAddressObject = (prefix) => {
+      const obj = {}
+      const fieldMap = {
+        FirstName: 'first_name',
+        LastName: 'last_name',
+        Email: 'email',
+        Phone: 'phone_number',
+        AddressLine1: 'address_line1',
+        Country: 'country',
+        State: 'state',
+        City: 'city',
+        PostalCode: 'postal_code',
+        AreaCode: 'area_code'
+      }
+      
+      for (const [key, snakeKey] of Object.entries(fieldMap)) {
+        const value = transactionData[`${prefix}${key}`]
+        if (value) obj[snakeKey] = value
+      }
+      
+      // 特殊字段处理
+      if (prefix === 'bill') {
+        if (transactionData.billDescriptor) obj.descriptor = transactionData.billDescriptor
+        if (transactionData.billAddressCollection) obj.billing_address_collection = transactionData.billAddressCollection
+      }
+      
+      return Object.keys(obj).length > 0 ? obj : null
+    }
+    
+    // 构建支付信息对象的辅助函数（与账单信息逻辑保持一致）
+    const buildPaymentObject = () => {
+      const obj = {}
+      // payment_method 是必填字段，必须包含
+      if (transactionData.paymentMethod) {
+        obj.payment_method = transactionData.paymentMethod
+      } else {
+        obj.payment_method = 'BANKCARD' // 默认值
+      }
+      
+      // 其他可选字段
+      if (transactionData.shopperReference) obj.shopper_reference = transactionData.shopperReference
+      if (transactionData.cardNo) obj.card_no = transactionData.cardNo
+      if (transactionData.expYear) obj.exp_year = transactionData.expYear
+      if (transactionData.expMonth) obj.exp_month = transactionData.expMonth
+      if (transactionData.cvv) obj.cvv = transactionData.cvv
+      if (transactionData.holderName) obj.holder_name = transactionData.holderName
+      if (transactionData.holderEmail) obj.holder_email = transactionData.holderEmail
+      
+      // payment 对象必须存在（至少包含 payment_method），所以总是返回对象
+      return obj
+    }
+    
+    // 构建浏览器信息对象的辅助函数（与账单信息逻辑保持一致）
+    const buildBrowserObject = () => {
+      const obj = {}
+      if (transactionData.userAgent) obj.user_agent = transactionData.userAgent
+      if (transactionData.colorDepth) obj.color_depth = transactionData.colorDepth
+      if (transactionData.language) obj.language = transactionData.language
+      if (transactionData.javaEnabled !== undefined && transactionData.javaEnabled !== null) {
+        obj.java_enabled = transactionData.javaEnabled
+      }
+      if (transactionData.deviceType) obj.device_type = transactionData.deviceType
+      if (transactionData.terminalType) obj.terminal_type = transactionData.terminalType
+      if (transactionData.deviceOs) obj.device_os = transactionData.deviceOs
+      if (transactionData.timezoneOffset) obj.timezone_offset = transactionData.timezoneOffset
+      if (transactionData.screenHeight) obj.screen_height = transactionData.screenHeight
+      if (transactionData.screenWidth) obj.screen_width = transactionData.screenWidth
+      if (transactionData.cookies) obj.cookies = transactionData.cookies
+      if (transactionData.deviceFingerPrintId) obj.device_finger_print_id = transactionData.deviceFingerPrintId
+      
+      return Object.keys(obj).length > 0 ? obj : null
+    }
+
+    // 构建账单信息对象（bill）- 只有当开关启用时才构建
+    if (transactionData.enableBillInfo) {
+      const billObj = buildAddressObject('bill')
+      if (billObj) {
+        requestData.bill = billObj
+      }
+    }
+
+    // 构建收货信息对象（shipping）- 只有当开关启用时才构建
+    if (transactionData.enableShipInfo) {
+      const shipObj = buildAddressObject('ship')
+      if (shipObj) {
+        requestData.shipping = shipObj
+      }
+    }
+
+    // 构建支付信息对象（payment）- 只有当开关启用时才构建
+    if (transactionData.enablePaymentInfo) {
+      const paymentObj = buildPaymentObject()
+      if (paymentObj) {
+        requestData.payment = paymentObj
+      }
+    }
+
+    // 构建浏览器信息对象（browser）- 只有当开关启用时才构建
+    if (transactionData.enableBrowserInfo) {
+      const browserObj = buildBrowserObject()
+      if (browserObj) {
+        requestData.browser = browserObj
+      }
+    }
+
+    // 调用 API（使用 privateKey 和 appId，与 PayKKaCheckoutBase 保持一致）
     const response = await payKKaApi.submitTransaction(
       apiConfig.baseUrl,
       apiConfig.merchantId,
-      apiConfig.apiKey,
-      requestData
+      apiConfig.privateKey, // 私钥用于签名
+      requestData,
+      apiConfig.appId // App ID 用于请求头
     )
 
     result.value = {
       status: 'success',
       timestamp: new Date().toLocaleString('zh-CN'),
-      requestUrl: `${apiConfig.baseUrl}/api/transaction`,
+      requestUrl: `${apiConfig.baseUrl}/v3/payment/acq`,
       requestData: requestData,
       responseData: response
     }
@@ -502,7 +2278,7 @@ const submitTransaction = async () => {
     result.value = {
       status: 'error',
       timestamp: new Date().toLocaleString('zh-CN'),
-      requestUrl: `${apiConfig.baseUrl}/api/transaction`,
+      requestUrl: `${apiConfig.baseUrl}/v3/payment/acq`,
       requestData: transactionData,
       responseData: null,
       error: error.message
@@ -512,8 +2288,7 @@ const submitTransaction = async () => {
   }
 }
 
-// 组件挂载时加载商户配置
-// 组件挂载时加载商户配置
+// 组件挂载时加载商户配置（与 PayKKaCheckoutBase 保持一致）
 onMounted(() => {
   loadMerchantConfigs()
 })
@@ -523,12 +2298,15 @@ onMounted(() => {
 .paykka-test {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 2rem;
+  padding: 0.4rem 0.6rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .container {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
+  max-width: 100%;
 }
 
 .header-with-back {
@@ -536,7 +2314,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 0.4rem;
   position: relative;
 }
 
@@ -564,159 +2342,457 @@ onMounted(() => {
 .title {
   color: white;
   text-align: center;
-  font-size: 2.5rem;
+  font-size: 1.4rem;
   margin-bottom: 0;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  font-weight: 600;
+  padding: 0;
   flex: 1;
 }
 
 .test-panel {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 0.8rem;
   background: white;
-  border-radius: 12px;
-  padding: 2rem;
+  border-radius: 6px;
+  padding: 0.8rem;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  min-height: calc(100vh - 60px);
+  max-height: calc(100vh - 60px);
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-section {
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: calc(100vh - 100px);
+  padding-right: 0.6rem;
+}
+
+.form-section::-webkit-scrollbar {
+  width: 8px;
+}
+
+.form-section::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.form-section::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 4px;
+}
+
+.form-section::-webkit-scrollbar-thumb:hover {
+  background: #5568d3;
 }
 
 .form-section h2,
 .result-section h2 {
   color: #333;
-  margin-bottom: 1.5rem;
-  font-size: 1.5rem;
+  margin-bottom: 0.4rem;
+  font-size: 1rem;
   border-bottom: 2px solid #667eea;
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.2rem;
+  font-weight: 600;
 }
 
 .form-section h3 {
   color: #555;
-  margin: 1.5rem 0 1rem 0;
-  font-size: 1.2rem;
+  margin: 0.5rem 0 0.3rem 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.section-header h3 {
+  margin: 0;
+  flex: 1;
+}
+
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.btn-random-section {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn-random-section:hover:not(:disabled) {
+  background: #5568d3;
+  transform: translateY(-1px);
+}
+
+.btn-random-section:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-switch input[type="checkbox"] {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  appearance: none;
+  background: #ccc;
+  border-radius: 12px;
+  outline: none;
+  transition: background 0.3s;
+  cursor: pointer;
+}
+
+.toggle-switch input[type="checkbox"]:checked {
+  background: #667eea;
+}
+
+.toggle-switch input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input[type="checkbox"]:checked::before {
+  transform: translateX(20px);
+}
+
+.toggle-label {
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.disabled-section {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.disabled-section .input-field:disabled,
+.disabled-section .btn-small:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.2rem;
   color: #333;
-  font-weight: 500;
-  font-size: 0.9rem;
+  font-weight: 600;
+  font-size: 0.8rem;
 }
 
 .input-field {
   width: 100%;
-  padding: 0.75rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.3s;
+  padding: 0.35rem 0.5rem;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  transition: all 0.3s;
   box-sizing: border-box;
+  background: #fff;
+  line-height: 1.3;
 }
 
 .input-field:focus {
   outline: none;
   border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.input-field:hover {
+  border-color: #ccc;
+}
+
+.input-field.readonly,
+.textarea.readonly {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  color: #666;
 }
 
 .textarea {
   resize: vertical;
   font-family: inherit;
+  min-height: 80px;
+  line-height: 1.4;
+}
+
+.field-desc {
+  display: block;
+  margin-top: 0.15rem;
+  color: #666;
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.required {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.private-key-container {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.private-key-container .input-field,
+.private-key-container .textarea {
+  flex: 1;
+}
+
+.btn-toggle-key {
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  white-space: nowrap;
+  height: fit-content;
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.btn-toggle-key:hover {
+  background: #5568d3;
+}
+
+.private-key-container input[readonly] {
+  cursor: pointer;
+}
+
+.input-with-button {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.input-with-button .input-field {
+  flex: 1;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 0.4rem;
+}
+
+.form-row-1 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.form-row-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 0.4rem;
 }
 
 .divider {
   height: 1px;
-  background: #e0e0e0;
-  margin: 1.5rem 0;
+  background: linear-gradient(to right, transparent, #e0e0e0, transparent);
+  margin: 0.5rem 0;
 }
 
 .button-group {
   display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
+  flex-direction: row;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1.5px solid #e0e0e0;
 }
 
 .btn-primary,
 .btn-secondary,
+.btn-random,
 .btn-info,
 .btn-small {
-  padding: 0.75rem 1.5rem;
+  padding: 0.35rem 0.5rem;
   border: none;
-  border-radius: 6px;
-  font-size: 1rem;
+  border-radius: 3px;
+  font-size: 0.85rem;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
   font-weight: 500;
-}
-
-.btn-primary {
-  background: #667eea;
-  color: white;
-  flex: 1;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #5568d3;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.btn-primary:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #f5f5f5;
-  color: #333;
-  flex: 1;
-}
-
-.btn-secondary:hover {
-  background: #e0e0e0;
-}
-
-.btn-info {
-  background: #17a2b8;
-  color: white;
-  flex: 1;
-}
-
-.btn-info:hover:not(:disabled) {
-  background: #138496;
+  line-height: 1.3;
+  height: fit-content;
+  box-sizing: border-box;
 }
 
 .btn-small {
-  padding: 0.5rem 1rem;
   background: #667eea;
   color: white;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
+  white-space: nowrap;
+  margin: 0;
 }
 
 .btn-small:hover {
   background: #5568d3;
 }
 
+.btn-primary {
+  background: #667eea;
+  color: white;
+  flex: 1;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  min-width: 100px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #5568d3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: #f5f5f5;
+  color: #333;
+  flex: 1;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  min-width: 100px;
+}
+
+.btn-secondary:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-random {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  flex: 1;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  min-width: 100px;
+}
+
+.btn-random:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(245, 87, 108, 0.4);
+}
+
+.btn-info {
+  background: #17a2b8;
+  color: white;
+  flex: 1;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  min-width: 100px;
+}
+
+.btn-info:hover:not(:disabled) {
+  background: #138496;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+}
+
+.btn-info:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .result-section {
   background: #f8f9fa;
   border-radius: 8px;
   padding: 1.5rem;
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: sticky;
+  top: 0;
+  border: 2px solid #e0e0e0;
+}
+
+.result-section::-webkit-scrollbar {
+  width: 8px;
+}
+
+.result-section::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.result-section::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 4px;
+}
+
+.result-section::-webkit-scrollbar-thumb:hover {
+  background: #5568d3;
 }
 
 .empty-state {
   text-align: center;
   color: #999;
-  padding: 3rem 0;
+  padding: 4rem 2rem;
+  font-size: 1.1rem;
 }
 
 .result-content {
@@ -763,27 +2839,28 @@ onMounted(() => {
 }
 
 .result-item {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.8rem;
 }
 
 .result-item label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   color: #333;
-  font-weight: 500;
-  font-size: 0.9rem;
+  font-weight: 600;
+  font-size: 0.8rem;
 }
 
 .code-block {
   background: #f4f4f4;
-  padding: 1rem;
+  padding: 0.8rem 1rem;
   border-radius: 6px;
   overflow-x: auto;
-  font-size: 0.85rem;
-  line-height: 1.6;
+  font-size: 0.8rem;
+  line-height: 1.5;
   border: 1px solid #e0e0e0;
   max-height: 300px;
   overflow-y: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
 }
 
 .result-item.error .code-block {
@@ -799,8 +2876,9 @@ code {
   background: #f4f4f4;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   word-break: break-all;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
 }
 
 .json-header {
@@ -855,7 +2933,7 @@ code {
   border: none;
   background: #f8f9fa;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   line-height: 1.6;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
   color: #333;
@@ -927,63 +3005,30 @@ code {
   height: 14px;
 }
 
-.json-display-container {
-  position: relative;
-  background: #f8f9fa;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.json-display {
-  background: #f8f9fa;
-  padding: 1rem;
-  margin: 0;
-  border-radius: 6px;
-  overflow-x: auto;
-  font-size: 0.85rem;
-  line-height: 1.6;
-  max-height: 400px;
-  overflow-y: auto;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
-  color: #333;
-}
-
-.btn-copy {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  padding: 0.4rem 0.8rem;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: all 0.3s;
-  z-index: 10;
-}
-
-.btn-copy:hover {
-  background: #5568d3;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-.btn-copy svg {
-  width: 14px;
-  height: 14px;
-}
-
 @media (max-width: 1024px) {
-  .test-panel {
-    grid-template-columns: 1fr;
+  .paykka-test {
+    padding: 0.4rem;
   }
 
-  .form-row {
+  .test-panel {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    padding: 0.6rem;
+  }
+
+  .form-section {
+    max-height: none;
+  }
+
+  .result-section {
+    max-height: none;
+    position: static;
+  }
+
+  .form-row,
+  .form-row-2,
+  .form-row-3,
+  .form-row-4 {
     grid-template-columns: 1fr;
   }
 

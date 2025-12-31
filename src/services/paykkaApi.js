@@ -4,27 +4,9 @@
  */
 
 import { getProxyUrl, getProxyHeaders } from '../utils/apiProxy'
+import { generateHeaderSign, generateHeaderNonce } from './signatureUtils'
 
-/**
- * 生成签名
- * @param {Object} params - 请求参数
- * @param {string} apiKey - API密钥
- * @returns {string} 签名字符串
- */
-function generateSignature(params, apiKey) {
-  // 将参数按key排序
-  const sortedKeys = Object.keys(params).sort()
-  const signString = sortedKeys
-    .map(key => `${key}=${params[key]}`)
-    .join('&')
-  
-  // 添加API密钥
-  const finalString = `${signString}&key=${apiKey}`
-  
-  // 这里使用简单的MD5哈希（实际项目中应使用crypto库）
-  // 注意：实际生产环境应使用更安全的签名算法
-  return btoa(finalString).substring(0, 32)
-}
+// 签名逻辑已改为使用 generateHeaderSign（SHA256_WITH_RSA），与 PayKKaCheckoutBase 保持一致
 
 /**
  * 测试API连接
@@ -104,47 +86,109 @@ export async function testConnection(baseUrl) {
  * 提交交易
  * @param {string} baseUrl - API基础地址
  * @param {string} merchantId - 商户ID
- * @param {string} apiKey - API密钥
+ * @param {string} apiKey - API密钥（私钥）
+ * @param {string} appId - App ID（用于请求头签名）
  * @param {Object} transactionData - 交易数据
  * @returns {Promise<Object>} 响应数据
  */
-export async function submitTransaction(baseUrl, merchantId, apiKey, transactionData) {
+export async function submitTransaction(baseUrl, merchantId, apiKey, transactionData, appId = null) {
   try {
-    // 构建请求参数
-    const requestParams = {
-      merchantId: merchantId,
-      orderNo: transactionData.orderNo,
-      amount: transactionData.amount,
-      currency: transactionData.currency,
-      transactionType: transactionData.transactionType,
-      description: transactionData.description || '',
-      callbackUrl: transactionData.callbackUrl || '',
-      timestamp: transactionData.timestamp || Date.now(),
-      nonce: Math.random().toString(36).substring(2, 15)
+    // 验证必须的参数
+    if (!apiKey) {
+      throw new Error('必须提供私钥（privateKey）用于生成请求头签名')
+    }
+    
+    if (!appId) {
+      throw new Error('必须提供x-paykka-appid')
     }
 
-    // 生成签名
-    const signature = generateSignature(requestParams, apiKey)
-    requestParams.sign = signature
+    // 构建请求参数（使用下划线命名，与 PayKKaCheckoutBase 保持一致）
+    const requestParams = {
+      merchant_id: merchantId,
+      trans_id: transactionData.transId || transactionData.orderNo,
+      amount: transactionData.amount,
+      currency: transactionData.currency,
+      payment_type: transactionData.paymentType || 'PURCHASE',
+      description: transactionData.description || '',
+      capture_method: transactionData.captureMethod || 'AUTOMATIC',
+      expire_time: transactionData.expireTime || '',
+      address_collection: transactionData.addressCollection || 'AUTO',
+      return_url: transactionData.returnUrl || '',
+      cancel_url: transactionData.cancelUrl || ''
+    }
+
+    // 添加可选字段
+    if (transactionData.goods) {
+      try {
+        requestParams.goods = typeof transactionData.goods === 'string' 
+          ? JSON.parse(transactionData.goods) 
+          : transactionData.goods
+      } catch (e) {
+        // 如果解析失败，跳过
+      }
+    }
+
+    if (transactionData.customer) {
+      try {
+        requestParams.customer = typeof transactionData.customer === 'string'
+          ? JSON.parse(transactionData.customer)
+          : transactionData.customer
+      } catch (e) {
+        // 如果解析失败，跳过
+      }
+    }
+
+    if (transactionData.bill) {
+      requestParams.bill = transactionData.bill
+    }
+
+    if (transactionData.shipping) {
+      requestParams.shipping = transactionData.shipping
+    }
+
+    if (transactionData.payment) {
+      requestParams.payment = transactionData.payment
+    }
+
+    if (transactionData.browser) {
+      requestParams.browser = transactionData.browser
+    }
+
+    // 自动生成timestamp和nonce（与 PayKKaCheckoutBase 保持一致）
+    const timestamp = Date.now()
+    const nonce = generateHeaderNonce()
+
+    // 构建请求头（与 PayKKaCheckoutBase 保持一致）
+    const requestHeaders = {
+      'Content-Type': 'application/json',
+      'x-paykka-appid': appId,
+      'x-paykka-timestamp': String(timestamp),
+      'x-paykka-nonce': nonce,
+      'x-paykka-sign-alg': 'SHA256_WITH_RSA'
+    }
+
+    // 生成请求头签名（与 PayKKaCheckoutBase 保持一致）
+    const requestBody = JSON.stringify(requestParams)
+    const sign = await generateHeaderSign(
+      'POST',
+      '/v3/payment/acq',
+      timestamp,
+      nonce,
+      requestBody,
+      apiKey, // privateKey
+      false // 禁用日志输出
+    )
+    requestHeaders['x-paykka-sign'] = sign
 
     // 发送请求（通过后端代理接口解决 CORS 问题）
-    const proxyUrl = getProxyUrl(baseUrl, '/api/transaction')
-    const requestBody = JSON.stringify(requestParams)
-    const proxyHeaders = getProxyHeaders(baseUrl, '/api/transaction', {
-      'Content-Type': 'application/json',
-      'X-Merchant-Id': merchantId,
-      'X-API-Key': apiKey
-    })
+    const proxyUrl = getProxyUrl(baseUrl, '/v3/payment/acq')
+    const proxyHeaders = getProxyHeaders(baseUrl, '/v3/payment/acq', requestHeaders)
     
     // 如果 proxyHeaders 为 null，说明是本地服务，直接请求
     if (!proxyHeaders) {
-      const response = await fetch(`${baseUrl}/api/transaction`, {
+      const response = await fetch(`${baseUrl}/v3/payment/acq`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Merchant-Id': merchantId,
-          'X-API-Key': apiKey
-        },
+        headers: requestHeaders,
         body: requestBody,
         mode: 'cors',
         credentials: 'omit',
@@ -153,13 +197,19 @@ export async function submitTransaction(baseUrl, merchantId, apiKey, transaction
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        throw new Error(errorData.message || errorData.ret_msg || `HTTP error! status: ${response.status}`)
       }
       
       const data = await response.json()
       return {
         success: true,
         message: '交易提交成功',
+        signedData: requestParams,
+        requestHeaders: {
+          ...requestHeaders,
+          _generated_timestamp: timestamp,
+          _generated_nonce: nonce
+        },
         data: data
       }
     }
@@ -176,13 +226,19 @@ export async function submitTransaction(baseUrl, merchantId, apiKey, transaction
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+      throw new Error(errorData.message || errorData.ret_msg || `HTTP error! status: ${response.status}`)
     }
 
     const data = await response.json()
     return {
       success: true,
       message: '交易提交成功',
+      signedData: requestParams,
+      requestHeaders: {
+        ...requestHeaders,
+        _generated_timestamp: timestamp,
+        _generated_nonce: nonce
+      },
       data: data
     }
   } catch (error) {
@@ -194,7 +250,7 @@ export async function submitTransaction(baseUrl, merchantId, apiKey, transaction
         message: '交易提交成功（模拟）',
         data: {
           transactionId: `TXN${Date.now()}`,
-          orderNo: transactionData.orderNo,
+          orderNo: transactionData.orderNo || transactionData.transId,
           status: 'pending',
           amount: transactionData.amount,
           currency: transactionData.currency,
