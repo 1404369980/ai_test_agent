@@ -740,6 +740,22 @@
                 <small class="field-desc">使用 PayKKa DropIn 组件进行支付</small>
               </div>
 
+              <!-- Component 支付页面跳转按钮 -->
+              <div 
+                v-if="result.status === 'success' && 
+                      result.responseData && 
+                      result.responseData.data && 
+                      result.responseData.data.session_id && 
+                      (result.responseData.data.session_mode === 'COMPONENT' || checkoutData.sessionMode === 'COMPONENT')" 
+                class="result-item success component-payment-action"
+              >
+                <label>Component 支付组件:</label>
+                <button @click="openComponentPayment" class="btn-component-payment">
+                  🎨 打开 Component 支付页面
+                </button>
+                <small class="field-desc">使用 PayKKa Component 组件进行支付</small>
+              </div>
+
               <div v-if="result.error" class="result-item error">
                 <label>错误信息:</label>
                 <pre class="code-block error-text">{{ result.error }}</pre>
@@ -865,6 +881,44 @@ const openDropInPayment = () => {
     const url = `${window.location.origin}/dropin-payment?${queryParams.toString()}`
     
     // 在新标签页中打开 DropIn 支付页面
+    window.open(url, '_blank')
+  } else {
+    console.error('响应数据不完整:', responseData)
+    showError('未找到支付会话数据，请先创建支付会话')
+  }
+}
+
+// 打开 Component 支付页面（与 DropIn 逻辑保持一致）
+const openComponentPayment = () => {
+  const responseData = result.value?.responseData
+  console.log('准备打开 Component 支付页面，响应数据:', responseData)
+  
+  if (responseData && responseData.data && responseData.data.session_id) {
+    // 构建完整的传递数据，包含响应数据和配置信息
+    const paymentData = {
+      // 完整的 API 响应数据
+      responseData: responseData,
+      // API 配置信息
+      apiConfig: {
+        baseUrl: apiConfig.baseUrl,
+        merchantId: apiConfig.merchantId,
+        appId: apiConfig.appId,
+        clientKey: apiConfig.clientKey
+      },
+      // 时间戳
+      timestamp: new Date().toISOString()
+    }
+    
+    // 保存完整的响应数据到 localStorage（使用相同的 key，因为 DropIn 和 Component 使用相同的支付页面组件）
+    localStorage.setItem('paykka_dropin_session', JSON.stringify(paymentData))
+    
+    // 构建 URL，传递响应数据（使用相同的路由，因为可以处理两种模式）
+    const queryParams = new URLSearchParams({
+      responseData: encodeURIComponent(JSON.stringify(paymentData))
+    })
+    const url = `${window.location.origin}/dropin-payment?${queryParams.toString()}`
+    
+    // 在新标签页中打开 Component 支付页面
     window.open(url, '_blank')
   } else {
     console.error('响应数据不完整:', responseData)
@@ -2674,6 +2728,47 @@ onMounted(() => {
 }
 
 .btn-dropin-payment:active {
+  transform: translateY(0);
+}
+
+/* Component 支付页面按钮样式（与 DropIn 保持一致） */
+.component-payment-action {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+}
+
+.component-payment-action label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.btn-component-payment {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-component-payment:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-component-payment:active {
   transform: translateY(0);
 }
 

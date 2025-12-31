@@ -3,7 +3,7 @@
     <div class="container">
       <div class="header-with-back">
         <button @click="goBack" class="back-button">← 返回首页</button>
-        <h1 class="title">PayKKa 交易接口测试</h1>
+        <h1 class="title">PayKKa API交易测试</h1>
       </div>
       
       <div class="test-panel">

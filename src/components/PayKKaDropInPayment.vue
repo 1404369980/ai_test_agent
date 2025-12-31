@@ -205,7 +205,7 @@
         throw new Error('PayKKaCardCheckoutUI 未加载')
       }
   
-      const { DropIn, ApplePay, GooglePay, setFraudDetectionEnv, PayKKaCheckout, setApiUrl, setCDNUrl } = PayKKaCardCheckoutUI
+      const { DropIn, Card, ApplePay, GooglePay, setFraudDetectionEnv, PayKKaCheckout, setApiUrl, setCDNUrl } = PayKKaCardCheckoutUI
   
       // 从 baseUrl 推断环境
       const baseUrl = sessionData.value.baseUrl || ''
@@ -229,6 +229,9 @@
       const responseData = sessionData.value.responseData || {}
       const sessionInfo = responseData.data || sessionData.value
   
+      // 获取 session_mode（用于决定创建 DropIn 还是 Component）
+      const sessionMode = sessionInfo?.session_mode || sessionData.value?.session_mode || 'DROP_IN'
+  
       // 从 baseUrl 推断环境
       let env = 'eu' // 默认值
       if (baseUrl.includes('dev') || baseUrl.includes('fat')) {
@@ -240,18 +243,18 @@
       console.log('创建 PayKKaCheckout 实例，使用数据:', {
         sessionId: sessionData.value.session_id,
         clientKey: clientKey,
-      //   env,
+        env,
         apiUrl,
-        sessionMode: sessionInfo.session_mode,
-        merchantId: sessionInfo.merchant_id,
-        transId: sessionInfo.trans_id,
-        amount: sessionInfo.amount,
-        currency: sessionInfo.currency
+        sessionMode: sessionMode,
+        merchantId: sessionInfo?.merchant_id,
+        transId: sessionInfo?.trans_id,
+        amount: sessionInfo?.amount,
+        currency: sessionInfo?.currency
       })
   
       // 获取返回 URL
-      const returnUrl = sessionInfo.return_url || sessionData.value.returnUrl || '/payment/success'
-      const cancelUrl = sessionInfo.cancel_url || sessionData.value.cancelUrl || '/payment/cancel'
+      const returnUrl = sessionInfo?.return_url || sessionData.value?.returnUrl || '/payment/success'
+      const cancelUrl = sessionInfo?.cancel_url || sessionData.value?.cancelUrl || '/payment/cancel'
   
       // 设置欺诈检测环境（如果需要）
       if (setFraudDetectionEnv) {
@@ -347,9 +350,32 @@
   
       console.log('PayKKaCheckout 实例创建成功')
   
-      // 创建 DropIn 实例
-      console.log('创建 DropIn 组件实例')
-      dropIn = paykkaCheckout.create(DropIn, {
+      // 根据 session_mode 决定创建 DropIn 还是 Component (Card) 实例
+      console.log('会话模式:', sessionMode)
+  
+      if (sessionMode === 'COMPONENT') {
+        // 创建 Component (Card) 实例
+        console.log('创建 Component (Card) 组件实例')
+        dropIn = paykkaCheckout.create(Card, {
+          showCardBrands: true,
+          onSubmit: (formValidateError) => {
+            console.log('Card 提交表单事件', formValidateError)
+            if (formValidateError) {
+              showWarning('表单验证失败，请检查输入')
+            }
+          },
+          onSuccess: () => {
+            console.log('Card 支付成功')
+            showSuccess('支付成功！')
+            setTimeout(() => {
+              window.location.href = returnUrl
+            }, 2000)
+          }
+        })
+      } else {
+        // 创建 DropIn 实例
+        console.log('创建 DropIn 组件实例')
+        dropIn = paykkaCheckout.create(DropIn, {
         paymentMethods: {
           card: {
             showCardBrands: true,
@@ -417,16 +443,17 @@
           showError('支付失败，请重试')
         }
       })
+      }
   
-      // 挂载 DropIn 到容器
-      console.log('挂载 DropIn 组件到容器', componentContainer.value)
+      // 挂载组件到容器
+      console.log(`挂载 ${sessionMode === 'COMPONENT' ? 'Component (Card)' : 'DropIn'} 组件到容器`, componentContainer.value)
       if (!componentContainer.value) {
-        throw new Error('组件容器未找到，无法挂载 DropIn')
+        throw new Error('组件容器未找到，无法挂载组件')
       }
       
       // 直接挂载到 componentContainer
       dropIn.mount(componentContainer.value)
-      console.log('DropIn 组件挂载成功')
+      console.log(`${sessionMode === 'COMPONENT' ? 'Component (Card)' : 'DropIn'} 组件挂载成功`)
   
       // 创建 ApplePay 组件（可选）
       try {
@@ -486,8 +513,19 @@
       showInfo('支付组件加载完成')
     } catch (err) {
       console.error('初始化支付组件失败:', err)
-      error.value = `初始化支付组件失败: ${err.message || err}`
+      const errorMessage = err?.message || err?.toString() || '未知错误'
+      error.value = `初始化支付组件失败: ${errorMessage}`
       loading.value = false
+      showError(`支付组件初始化失败: ${errorMessage}`)
+      
+      // 如果是特定错误，提供更详细的提示
+      if (errorMessage.includes('session_id') || errorMessage.includes('session')) {
+        error.value = '会话数据无效，请重新创建支付会话'
+      } else if (errorMessage.includes('container') || errorMessage.includes('容器')) {
+        error.value = '组件容器未找到，请刷新页面重试'
+      } else if (errorMessage.includes('PayKKaCardCheckoutUI') || errorMessage.includes('未加载')) {
+        error.value = 'PayKKa 支付库加载失败，请检查网络连接或刷新页面'
+      }
     }
   }
   
