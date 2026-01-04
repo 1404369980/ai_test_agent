@@ -90,7 +90,7 @@
 
           <h3>交易参数</h3>
 
-          <div class="form-row-3">
+          <div class="form-row-4">
             <div class="form-group">
               <label>交易ID (Trans ID) <span class="required">*</span></label>
               <div class="input-with-button">
@@ -138,9 +138,7 @@
                 <button @click="generateRandomCurrency" class="btn-small">随机币种</button>
               </div>
             </div>
-            </div>
 
-          <div class="form-row-2">
             <div class="form-group">
               <label>支付类型 (Payment Type) <span class="required">*</span></label>
               <SmartSelect
@@ -155,7 +153,6 @@
               />
               <small class="field-desc">默认值：PURCHASE</small>
             </div>
-
           </div>
 
           <!-- 循环支付参数（仅当支付类型为 RECURRING 时显示） -->
@@ -184,17 +181,6 @@
               />
               <small class="field-desc">当循环支付非首次支付，由商户主动发起的支付时，此字段需要填true</small>
             </div>
-          </div>
-
-          <div class="form-group">
-            <label>商品描述 (Description)</label>
-            <textarea 
-              v-model="transactionData.description" 
-              placeholder="请输入商品描述"
-              class="input-field textarea"
-              rows="2"
-            ></textarea>
-            <button @click="generateRandomDescription" class="btn-small" style="margin-top: 0.3rem;">随机描述</button>
           </div>
 
           <div class="form-row-3">
@@ -256,28 +242,6 @@
                 class="input-field"
               />
             </div>
-          </div>
-
-          <div class="form-group">
-            <label>回调地址 (Callback URL)</label>
-            <input 
-              v-model="transactionData.callbackUrl" 
-              type="text" 
-              placeholder="https://your-domain.com/callback"
-              class="input-field"
-            />
-          </div>
-
-          <div class="form-group">
-            <label>商品信息 (Goods) <span class="required">*</span></label>
-            <textarea 
-              v-model="transactionData.goods" 
-              placeholder='[{"name":"商品名称","quantity":1,"price":99.99,"link":"https://example.com/product"}]'
-              class="input-field textarea"
-              rows="5"
-            ></textarea>
-            <button @click="generateGoods" class="btn-small" style="margin-top: 0.3rem;">随机生成商品</button>
-            <small class="field-desc">请输入有效的JSON数组，每个商品必须包含 name, quantity, price, link 字段</small>
           </div>
 
           <div class="divider"></div>
@@ -1616,10 +1580,8 @@ const generateBrowserInfo = () => {
 const generateAllRandom = () => {
   generateRandomAmount()
   generateRandomCurrency()
-  generateRandomDescription()
   generateAllCustomerInfo()
   generateTransId()
-  generateGoods()
   // 如果账单信息开关启用，则生成账单信息（与浏览器信息逻辑保持一致）
   if (transactionData.enableBillInfo) {
     generateAllBillInfo()
@@ -1766,7 +1728,6 @@ const buildRequestParams = () => {
       address_collection: transactionData.addressCollection || 'AUTO',
       return_url: transactionData.returnUrl || '(未填写)',
       cancel_url: transactionData.cancelUrl || '(未填写)',
-      callbackUrl: transactionData.callbackUrl || '(未填写)',
       goods: goodsObj || '(未填写)'
     }
     
@@ -1937,9 +1898,6 @@ const updateFormFromJson = () => {
     }
     if (params.cancel_url && params.cancel_url !== '(未填写)') {
       transactionData.cancelUrl = params.cancel_url
-    }
-    if (params.callbackUrl && params.callbackUrl !== '(未填写)') {
-      transactionData.callbackUrl = params.callbackUrl
     }
     if (params.merchant_id && params.merchant_id !== '(未填写)') {
       apiConfig.merchantId = params.merchant_id
@@ -2150,7 +2108,6 @@ const resetForm = () => {
   transactionData.addressCollection = 'AUTO'
   transactionData.returnUrl = getDefaultReturnUrl()
   transactionData.cancelUrl = getDefaultCancelUrl()
-  transactionData.callbackUrl = ''
   // 重置开关
   transactionData.enableCustomerInfo = true
   transactionData.enableBillInfo = true
@@ -2264,18 +2221,23 @@ const validateJsonData = () => {
     }
   }
 
+  // 商品信息从 JSON 中解析，如果没有则返回 null（允许为空）
   try {
-    goodsObj = JSON.parse(transactionData.goods)
-    // 验证 goods[0].link 不能为null
-    if (!Array.isArray(goodsObj) || goodsObj.length === 0) {
-      showError('商品信息 (Goods) 必须是一个非空数组')
-      return null
-    }
-    for (let i = 0; i < goodsObj.length; i++) {
-      if (goodsObj[i].link === null || goodsObj[i].link === undefined) {
-        showError(`商品信息 (Goods) 中第 ${i + 1} 个商品的 link 字段不能为null`)
+    if (transactionData.goods) {
+      goodsObj = JSON.parse(transactionData.goods)
+      // 验证 goods[0].link 不能为null
+      if (!Array.isArray(goodsObj) || goodsObj.length === 0) {
+        showError('商品信息 (Goods) 必须是一个非空数组')
         return null
       }
+      for (let i = 0; i < goodsObj.length; i++) {
+        if (goodsObj[i].link === null || goodsObj[i].link === undefined) {
+          showError(`商品信息 (Goods) 中第 ${i + 1} 个商品的 link 字段不能为null`)
+          return null
+        }
+      }
+    } else {
+      goodsObj = null
     }
   } catch (e) {
     showError('商品信息 (Goods) 格式错误，请输入有效的JSON')
@@ -2622,19 +2584,20 @@ onMounted(() => {
 
 .form-section h3 {
   color: #555;
-  margin: 1rem 0 0.6rem 0;
-  font-size: 0.95rem;
+  margin: 0.6rem 0 0.4rem 0;
+  font-size: 0.9rem;
   font-weight: 600;
   padding-left: 0.5rem;
   border-left: 3px solid #667eea;
+  line-height: 1.3;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 1rem 0 0.6rem 0;
-  padding: 0.6rem 0.8rem;
+  margin: 0.6rem 0 0.4rem 0;
+  padding: 0.4rem 0.6rem;
   background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
   border-radius: 8px;
   border: 1px solid #e0e0e0;
@@ -2654,8 +2617,8 @@ onMounted(() => {
   align-items: center;
   flex: 1;
   user-select: none;
-  padding: 0.4rem 0.6rem;
-  margin: -0.4rem -0.6rem;
+  padding: 0.3rem 0.5rem;
+  margin: -0.3rem -0.5rem;
   border-radius: 6px;
   transition: all 0.2s ease;
   cursor: pointer;
@@ -2668,10 +2631,11 @@ onMounted(() => {
 
 .section-header-title h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #333;
   pointer-events: none;
+  line-height: 1.3;
 }
 
 .section-header-title svg {
@@ -2687,7 +2651,7 @@ onMounted(() => {
 .section-header-actions {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.5rem;
 }
 
 .btn-random-section {
@@ -2787,7 +2751,7 @@ onMounted(() => {
 }
 
 .form-group {
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.35rem;
 }
 
 .form-group:last-child {
@@ -2796,15 +2760,16 @@ onMounted(() => {
 
 .form-group label {
   display: block;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.1rem;
   color: #333;
   font-weight: 600;
   font-size: 0.8rem;
+  line-height: 1.2;
 }
 
 .input-field {
   width: 100%;
-  padding: 0.4rem 0.6rem;
+  padding: 0.3rem 0.5rem;
   border: 2px solid #d0d0d0;
   border-radius: 5px;
   font-size: 0.85rem;
@@ -2812,7 +2777,7 @@ onMounted(() => {
   box-sizing: border-box;
   background: #ffffff;
   color: #1a1a1a;
-  line-height: 1.4;
+  line-height: 1.3;
   font-weight: 500;
 }
 
@@ -2855,16 +2820,16 @@ onMounted(() => {
 .textarea {
   resize: vertical;
   font-family: inherit;
-  min-height: 80px;
-  line-height: 1.4;
+  min-height: 60px;
+  line-height: 1.3;
 }
 
 .field-desc {
   display: block;
-  margin-top: 0.25rem;
+  margin-top: 0.15rem;
   color: #888;
-  font-size: 0.75rem;
-  line-height: 1.4;
+  font-size: 0.7rem;
+  line-height: 1.2;
   font-style: italic;
   padding-left: 0.3rem;
   border-left: 2px solid #e0e0e0;
@@ -2942,28 +2907,28 @@ onMounted(() => {
 .form-row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
-  margin-bottom: 0.4rem;
+  gap: 0.4rem;
+  margin-bottom: 0.3rem;
 }
 
 .form-row-3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.6rem;
-  margin-bottom: 0.4rem;
+  gap: 0.4rem;
+  margin-bottom: 0.3rem;
 }
 
 .form-row-4 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 0.6rem;
-  margin-bottom: 0.4rem;
+  gap: 0.4rem;
+  margin-bottom: 0.3rem;
 }
 
 .divider {
-  height: 2px;
+  height: 1px;
   background: linear-gradient(to right, transparent, #e0e0e0 20%, #e0e0e0 80%, transparent);
-  margin: 1rem 0;
+  margin: 0.6rem 0;
   position: relative;
 }
 
@@ -3000,14 +2965,14 @@ onMounted(() => {
 .btn-random,
 .btn-info,
 .btn-small {
-  padding: 0.35rem 0.5rem;
+  padding: 0.25rem 0.4rem;
   border: none;
   border-radius: 3px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 1.2;
   height: fit-content;
   box-sizing: border-box;
 }
