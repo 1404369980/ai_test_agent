@@ -11,30 +11,30 @@
           <h2>API 配置</h2>
           
           <div class="form-row-2">
-            <div class="form-group">
-              <label>API 地址</label>
-              <input 
+          <div class="form-group">
+            <label>API 地址</label>
+            <input 
                 :value="apiConfig.baseUrl || (selectedMerchantId ? '' : '请先选择商户配置')" 
-                type="text" 
+              type="text" 
                 readonly
                 placeholder="从商户配置中自动获取"
                 class="input-field readonly"
-              />
+            />
               <small class="field-desc">从选择的商户配置中自动获取，无需手动输入</small>
-            </div>
+          </div>
 
-            <div class="form-group">
-              <label>商户ID (Merchant ID)</label>
-              <select 
-                v-model="selectedMerchantId" 
-                @change="onMerchantChange"
-                class="input-field"
-              >
-                <option value="">-- 请选择商户 --</option>
-                <option v-for="config in merchantConfigs" :key="config.merchantId" :value="config.merchantId">
-                  {{ config.name || config.merchantId }}
-                </option>
-              </select>
+          <div class="form-group">
+            <label>商户ID (Merchant ID)</label>
+            <select 
+              v-model="selectedMerchantId" 
+              @change="onMerchantChange"
+              class="input-field"
+            >
+              <option value="">-- 请选择商户 --</option>
+              <option v-for="config in merchantConfigs" :key="config.merchantId" :value="config.merchantId">
+                {{ config.name || config.merchantId }}
+              </option>
+            </select>
               <small class="field-desc">从已配置的商户中选择，选择后将自动填充API地址、商户ID、App ID和私钥</small>
             </div>
           </div>
@@ -138,7 +138,7 @@
                 <button @click="generateRandomCurrency" class="btn-small">随机币种</button>
               </div>
             </div>
-          </div>
+            </div>
 
           <div class="form-row-2">
             <div class="form-group">
@@ -156,17 +156,33 @@
               <small class="field-desc">默认值：PURCHASE</small>
             </div>
 
+          </div>
+
+          <!-- 循环支付参数（仅当支付类型为 RECURRING 时显示） -->
+          <div v-if="transactionData.paymentType === 'RECURRING'" class="form-row-2">
             <div class="form-group">
-              <label>交易类型 (Transaction Type)</label>
-              <SmartSelect
-                v-model="transactionData.transactionType"
-                :options="[
-                  { value: 'payment', label: '支付 (Payment)' },
-                  { value: 'refund', label: '退款 (Refund)' },
-                  { value: 'query', label: '查询 (Query)' }
-                ]"
-                placeholder="选择或输入交易类型"
+              <label>循环支付协议ID (Recurring Agreement ID)</label>
+              <input 
+                v-model="transactionData.recurringAgreementId" 
+                type="text" 
+                placeholder="RA37285619238472"
+                maxlength="32"
+                class="input-field"
               />
+              <small class="field-desc">循环支付协议ID，在非首次循环支付时需要携带（0-32个字符）</small>
+            </div>
+
+            <div class="form-group">
+              <label>商户主动发起 (MIT)</label>
+              <SmartSelect
+                v-model="mitText"
+                :options="[
+                  { value: 'true', label: 'true - 商户主动发起' },
+                  { value: 'false', label: 'false - 非商户主动发起' }
+                ]"
+                placeholder="选择或输入 true/false"
+              />
+              <small class="field-desc">当循环支付非首次支付，由商户主动发起的支付时，此字段需要填true</small>
             </div>
           </div>
 
@@ -1036,49 +1052,69 @@
             </div>
 
             <div class="result-body">
-              <div v-if="result.responseData" class="result-section-item">
-                <div class="result-section-header" @click="resultCollapsed.responseData = !resultCollapsed.responseData">
-                  <div class="result-section-title">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem; transition: transform 0.3s;" :style="{ transform: resultCollapsed.responseData ? 'rotate(-90deg)' : 'rotate(0deg)' }">
-                      <path d="M9 18l6-6-6-6"/>
+              <div v-if="result.responseData" class="form-group">
+                <div class="json-header">
+                  <label>API响应结果</label>
+                  <button @click="resultCollapsed.responseData = !resultCollapsed.responseData" class="btn-toggle-collapse" :title="resultCollapsed.responseData ? '展开' : '折叠'">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path v-if="resultCollapsed.responseData" d="M9 18l6-6-6-6"/>
+                      <path v-else d="M18 15l-6-6-6 6"/>
                     </svg>
-                    <label>API响应结果</label>
-              </div>
-                  <button @click.stop="copyResultText(formatJson(result.responseData))" class="btn-copy-small" title="复制">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
+                    {{ resultCollapsed.responseData ? '展开' : '折叠' }}
                   </button>
-              </div>
-                <div v-show="!resultCollapsed.responseData" class="result-section-content">
-                  <pre class="code-block success">{{ formatJson(result.responseData) }}</pre>
+                </div>
+                <div v-show="!resultCollapsed.responseData" class="json-display-container">
+                  <textarea 
+                    :value="formatJson(result.responseData)" 
+                    readonly
+                    class="json-edit"
+                    spellcheck="false"
+                  ></textarea>
+                  <div class="json-actions">
+                    <button @click="copyResultText(formatJson(result.responseData))" class="btn-copy" title="复制JSON">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      复制
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div v-if="result.error" class="result-section-item error">
-                <div class="result-section-header" @click="resultCollapsed.error = !resultCollapsed.error">
-                  <div class="result-section-title">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem; transition: transform 0.3s;" :style="{ transform: resultCollapsed.error ? 'rotate(-90deg)' : 'rotate(0deg)' }">
-                      <path d="M9 18l6-6-6-6"/>
+              <div v-if="result.error" class="form-group">
+                <div class="json-header">
+                  <label>错误信息</label>
+                  <button @click="resultCollapsed.error = !resultCollapsed.error" class="btn-toggle-collapse" :title="resultCollapsed.error ? '展开' : '折叠'">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path v-if="resultCollapsed.error" d="M9 18l6-6-6-6"/>
+                      <path v-else d="M18 15l-6-6-6 6"/>
                     </svg>
-                    <label>错误信息</label>
-                  </div>
-                  <button @click.stop="copyResultText(result.error)" class="btn-copy-small" title="复制">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
+                    {{ resultCollapsed.error ? '展开' : '折叠' }}
                   </button>
                 </div>
-                <div v-show="!resultCollapsed.error" class="result-section-content">
-                <pre class="code-block error-text">{{ result.error }}</pre>
+                <div v-show="!resultCollapsed.error" class="json-display-container">
+                  <textarea 
+                    :value="result.error" 
+                    readonly
+                    class="json-edit error-text"
+                    spellcheck="false"
+                  ></textarea>
+                  <div class="json-actions">
+                    <button @click="copyResultText(result.error)" class="btn-copy" title="复制">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      复制
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
     </div>
     
     <!-- Toast 提示 -->
@@ -1173,7 +1209,8 @@ const transactionData = reactive({
   amount: 0,
   currency: 'USD',
   paymentType: 'PURCHASE',
-  transactionType: 'payment',
+  recurringAgreementId: '',
+  mit: false,
   description: '',
   captureMethod: 'AUTOMATIC',
   expireTime: getDefaultExpireTime(),
@@ -1281,6 +1318,26 @@ const javaEnabledText = computed({
       // 尝试解析
       const lowerVal = String(val).toLowerCase().trim()
       transactionData.javaEnabled = lowerVal === 'true' || lowerVal === '1' || lowerVal === 'yes'
+    }
+  }
+})
+
+// MIT 文本输入处理（布尔值转文本）
+const mitText = computed({
+  get: () => {
+    if (transactionData.mit === true || transactionData.mit === 'true') return 'true'
+    if (transactionData.mit === false || transactionData.mit === 'false') return 'false'
+    return String(transactionData.mit || 'false')
+  },
+  set: (val) => {
+    if (val === 'true' || val === true) {
+      transactionData.mit = true
+    } else if (val === 'false' || val === false) {
+      transactionData.mit = false
+    } else {
+      // 尝试解析
+      const lowerVal = String(val).toLowerCase().trim()
+      transactionData.mit = lowerVal === 'true' || lowerVal === '1' || lowerVal === 'yes'
     }
   }
 })
@@ -1712,7 +1769,6 @@ const buildRequestParams = () => {
       amount: transactionData.amount || 0,
       currency: transactionData.currency || 'USD',
       payment_type: transactionData.paymentType || 'PURCHASE',
-      transactionType: transactionData.transactionType || 'payment',
       description: transactionData.description || '(未填写)',
       capture_method: transactionData.captureMethod || 'AUTOMATIC',
       expire_time: transactionData.expireTime ? formatExpireTime(transactionData.expireTime) : '(未填写)',
@@ -1721,6 +1777,16 @@ const buildRequestParams = () => {
       cancel_url: transactionData.cancelUrl || '(未填写)',
       callbackUrl: transactionData.callbackUrl || '(未填写)',
       goods: goodsObj || '(未填写)'
+    }
+    
+    // 循环支付参数（仅当支付类型为 RECURRING 时添加）
+    if (transactionData.paymentType === 'RECURRING') {
+      if (transactionData.recurringAgreementId) {
+        params.recurring_agreement_id = transactionData.recurringAgreementId
+      }
+      if (transactionData.mit !== undefined && transactionData.mit !== null) {
+        params.mit = transactionData.mit
+      }
     }
     
     // 只有当客户信息开关启用时，才添加客户信息字段和 customer 对象
@@ -1859,8 +1925,12 @@ const updateFormFromJson = () => {
     if (params.payment_type && params.payment_type !== '(未填写)') {
       transactionData.paymentType = params.payment_type
     }
-    if (params.transactionType && params.transactionType !== '(未填写)') {
-      transactionData.transactionType = params.transactionType
+    // 循环支付参数
+    if (params.recurring_agreement_id && params.recurring_agreement_id !== '(未填写)') {
+      transactionData.recurringAgreementId = params.recurring_agreement_id
+    }
+    if (params.mit !== undefined && params.mit !== null && params.mit !== '(未填写)') {
+      transactionData.mit = params.mit === true || params.mit === 'true' || params.mit === 1
     }
     if (params.description && params.description !== '(未填写)') {
       transactionData.description = params.description
@@ -2085,7 +2155,8 @@ const resetForm = () => {
   transactionData.amount = 0
   transactionData.currency = 'USD'
   transactionData.paymentType = 'PURCHASE'
-  transactionData.transactionType = 'payment'
+  transactionData.recurringAgreementId = ''
+  transactionData.mit = false
   transactionData.description = ''
   transactionData.captureMethod = 'AUTOMATIC'
   transactionData.expireTime = getDefaultExpireTime()
@@ -2280,6 +2351,16 @@ const submitTransaction = async () => {
       addressCollection: transactionData.addressCollection || 'AUTO',
       returnUrl: transactionData.returnUrl || '',
       cancelUrl: transactionData.cancelUrl || ''
+    }
+    
+    // 循环支付参数（仅当支付类型为 RECURRING 时添加）
+    if (transactionData.paymentType === 'RECURRING') {
+      if (transactionData.recurringAgreementId) {
+        requestData.recurring_agreement_id = transactionData.recurringAgreementId
+      }
+      if (transactionData.mit !== undefined && transactionData.mit !== null) {
+        requestData.mit = transactionData.mit
+      }
     }
 
     // 只有当客户信息开关启用时，才添加客户信息字段和 customer 对象
@@ -2741,24 +2822,28 @@ onMounted(() => {
 .input-field {
   width: 100%;
   padding: 0.4rem 0.6rem;
-  border: 1.5px solid #e0e0e0;
+  border: 2px solid #d0d0d0;
   border-radius: 5px;
   font-size: 0.85rem;
   transition: all 0.3s ease;
   box-sizing: border-box;
-  background: #fff;
+  background: #ffffff;
+  color: #1a1a1a;
   line-height: 1.4;
+  font-weight: 500;
 }
 
 .input-field:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  background: #fafbff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  background: #ffffff;
+  color: #000000;
 }
 
 .input-field:hover:not(:disabled) {
-  border-color: #d0d0d0;
+  border-color: #999999;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
 }
 
 .input-field:focus {
@@ -3145,8 +3230,8 @@ onMounted(() => {
 .result-section-item {
   margin-bottom: 1rem;
   background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  border: 2px solid #e0e0e0;
   overflow: hidden;
   transition: all 0.3s ease;
 }
@@ -3157,19 +3242,21 @@ onMounted(() => {
 }
 
 .result-section-item.error {
-  background: #fff5f5;
-  border-color: #fc8181;
+  background: #f8f9fa;
+  border-color: #e0e0e0;
+  border: 2px solid #e0e0e0;
 }
 
 .result-section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.8rem 1rem;
+  padding: 1rem 1.2rem;
   background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
   cursor: pointer;
   user-select: none;
   transition: all 0.2s ease;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .result-section-header:hover {
@@ -3187,11 +3274,12 @@ onMounted(() => {
 }
 
 .result-section-title label {
-  color: #333;
-  font-weight: 600;
-  font-size: 0.9rem;
+  color: #1a1a1a;
+  font-weight: 700;
+  font-size: 1rem;
   margin: 0;
   cursor: pointer;
+  letter-spacing: 0.3px;
 }
 
 .result-section-item.error .result-section-title label {
@@ -3221,22 +3309,25 @@ onMounted(() => {
 }
 
 .result-section-content {
-  padding: 1rem;
-  background: white;
+  padding: 0;
+  background: #f8f9fa;
+  border-top: none;
 }
 
 .code-block {
-  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+  background: #f8f9fa;
   padding: 1rem;
   border-radius: 6px;
   overflow-x: auto;
   font-size: 0.8rem;
   line-height: 1.6;
-  border: 1px solid #e0e0e0;
+  border: none;
   max-height: 400px;
   overflow-y: auto;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  color: #333;
   margin: 0;
+  box-sizing: border-box;
   transition: all 0.3s ease;
 }
 
@@ -3260,13 +3351,14 @@ onMounted(() => {
 }
 
 .code-block.success {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border-color: #bae6fd;
+  background: #f8f9fa;
+  border: none;
+  color: #333;
 }
 
 .code-block.error-text {
-  background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
-  border-color: #fc8181;
+  background: #f8f9fa;
+  border: none;
   color: #c53030;
 }
 
@@ -3366,6 +3458,14 @@ code {
   background: #fff;
 }
 
+.json-edit.error-text {
+  color: #c53030;
+}
+
+.json-edit[readonly] {
+  cursor: default;
+}
+
 .json-actions {
   display: flex;
   gap: 0.5rem;
@@ -3454,5 +3554,26 @@ code {
   .button-group {
     flex-direction: column;
   }
+}
+
+/* Select 下拉框样式优化，使其更明显 */
+.input-field select,
+select.input-field {
+  border: 2px solid #d0d0d0;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.input-field select:focus,
+select.input-field:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  color: #000000;
+}
+
+.input-field select:hover:not(:disabled),
+select.input-field:hover:not(:disabled) {
+  border-color: #999999;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
 }
 </style>

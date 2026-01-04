@@ -116,6 +116,16 @@ export async function submitTransaction(baseUrl, merchantId, apiKey, transaction
       return_url: transactionData.returnUrl || '',
       cancel_url: transactionData.cancelUrl || ''
     }
+    
+    // 循环支付参数（仅当支付类型为 RECURRING 时添加）
+    if (transactionData.paymentType === 'RECURRING') {
+      if (transactionData.recurring_agreement_id) {
+        requestParams.recurring_agreement_id = transactionData.recurring_agreement_id
+      }
+      if (transactionData.mit !== undefined && transactionData.mit !== null) {
+        requestParams.mit = transactionData.mit
+      }
+    }
 
     // 添加可选字段
     if (transactionData.goods) {

@@ -279,24 +279,28 @@ watch(() => props.options, () => {
 .smart-select-input {
   width: 100%;
   padding: 0.4rem 2rem 0.4rem 0.6rem;
-  border: 1.5px solid #e0e0e0;
+  border: 2px solid #d0d0d0;
   border-radius: 5px;
   font-size: 0.85rem;
   transition: all 0.3s ease;
   box-sizing: border-box;
-  background: #fff;
+  background: #ffffff;
+  color: #1a1a1a;
   line-height: 1.4;
+  font-weight: 500;
 }
 
 .smart-select-input:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  background: #fafbff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  background: #ffffff;
+  color: #000000;
 }
 
 .smart-select-input:hover:not(:disabled) {
-  border-color: #d0d0d0;
+  border-color: #999999;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
 }
 
 .smart-select-input:disabled {
@@ -328,10 +332,10 @@ watch(() => props.options, () => {
   left: 0;
   right: 0;
   margin-top: 0.2rem;
-  background: white;
-  border: 1.5px solid #e0e0e0;
+  background: #ffffff;
+  border: 2px solid #d0d0d0;
   border-radius: 5px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   max-height: 300px;
   overflow-y: auto;
   z-index: 1000;
@@ -371,9 +375,11 @@ watch(() => props.options, () => {
   padding: 0.6rem 0.8rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #e0e0e0;
   display: flex;
   align-items: center;
+  color: #1a1a1a;
+  font-weight: 500;
 }
 
 .smart-select-option:last-child {
@@ -382,7 +388,9 @@ watch(() => props.options, () => {
 
 .smart-select-option:hover,
 .smart-select-option.is-highlighted {
-  background: linear-gradient(135deg, #f0f2f5 0%, #e8ebef 100%);
+  background: linear-gradient(135deg, #e8f0ff 0%, #d0e4ff 100%);
+  color: #000000;
+  font-weight: 600;
 }
 
 .smart-select-option.is-matched {

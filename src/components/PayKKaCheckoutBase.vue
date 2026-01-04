@@ -2093,23 +2093,27 @@ onMounted(() => {
 .input-field {
   width: 100%;
   padding: 0.35rem 0.5rem;
-  border: 1.5px solid #e0e0e0;
+  border: 2px solid #d0d0d0;
   border-radius: 3px;
   font-size: 0.85rem;
   transition: all 0.3s;
   box-sizing: border-box;
-  background: #fff;
+  background: #ffffff;
+  color: #1a1a1a;
   line-height: 1.3;
+  font-weight: 500;
 }
 
 .input-field:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+  color: #000000;
 }
 
-.input-field:hover {
-  border-color: #ccc;
+.input-field:hover:not(:disabled) {
+  border-color: #999999;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
 }
 
 .input-field.readonly,
@@ -2834,5 +2838,26 @@ code {
   .checkbox-group {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+/* Select 下拉框样式优化，使其更明显 */
+.input-field select,
+select.input-field {
+  border: 2px solid #d0d0d0;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.input-field select:focus,
+select.input-field:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+  color: #000000;
+}
+
+.input-field select:hover:not(:disabled),
+select.input-field:hover:not(:disabled) {
+  border-color: #999999;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
 }
 </style>
