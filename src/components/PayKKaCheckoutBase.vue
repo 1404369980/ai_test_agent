@@ -122,22 +122,20 @@
             <div class="form-group">
               <label>币种 (Currency)</label>
               <div class="input-with-button">
-                <input 
-                  v-model="checkoutData.currency" 
-                  type="text" 
-                  list="currency-list"
+                <SmartSelect
+                  v-model="checkoutData.currency"
+                  :options="[
+                    { value: 'USD', label: 'USD - 美元' },
+                    { value: 'EUR', label: 'EUR - 欧元' },
+                    { value: 'GBP', label: 'GBP - 英镑' },
+                    { value: 'CNY', label: 'CNY - 人民币' },
+                    { value: 'JPY', label: 'JPY - 日元' },
+                    { value: 'HKD', label: 'HKD - 港币' },
+                    { value: 'SGD', label: 'SGD - 新加坡元' }
+                  ]"
                   placeholder="选择或输入币种"
-                  class="input-field"
+                  style="flex: 1;"
                 />
-                <datalist id="currency-list">
-                  <option value="USD">USD - 美元</option>
-                  <option value="EUR">EUR - 欧元</option>
-                  <option value="GBP">GBP - 英镑</option>
-                  <option value="CNY">CNY - 人民币</option>
-                  <option value="JPY">JPY - 日元</option>
-                  <option value="HKD">HKD - 港币</option>
-                  <option value="SGD">SGD - 新加坡元</option>
-                </datalist>
                 <button @click="generateRandomCurrency" class="btn-small">随机币种</button>
               </div>
             </div>
@@ -146,36 +144,30 @@
           <div class="form-row-2">
             <div class="form-group">
               <label>支付类型 (Payment Type) <span class="required">*</span></label>
-              <input 
-                v-model="checkoutData.paymentType" 
-                type="text" 
-                list="payment-type-list"
+              <SmartSelect
+                v-model="checkoutData.paymentType"
+                :options="[
+                  { value: 'PURCHASE', label: 'PURCHASE - 消费' },
+                  { value: 'PREPARE_AUTHORIZE', label: 'PREPARE_AUTHORIZE - 预授权' },
+                  { value: 'RECURRING', label: 'RECURRING - 循环支付' },
+                  { value: 'REFUND', label: 'REFUND - 退款' }
+                ]"
                 placeholder="选择或输入支付类型"
-                class="input-field"
               />
-              <datalist id="payment-type-list">
-                <option value="PURCHASE">PURCHASE - 消费</option>
-                <option value="PREPARE_AUTHORIZE">PREPARE_AUTHORIZE - 预授权</option>
-                <option value="RECURRING">RECURRING - 循环支付</option>
-                <option value="REFUND">REFUND - 退款</option>
-              </datalist>
               <small class="field-desc">默认值：PURCHASE</small>
             </div>
 
             <div class="form-group">
               <label>会话模式 (Session Mode)</label>
-              <input 
-                v-model="checkoutData.sessionMode" 
-                type="text" 
-                list="session-mode-list"
+              <SmartSelect
+                v-model="checkoutData.sessionMode"
+                :options="[
+                  { value: 'HOSTED', label: 'HOSTED - 托管模式' },
+                  { value: 'COMPONENT', label: 'COMPONENT - 组件模式' },
+                  { value: 'DROP_IN', label: 'DROP_IN - 嵌入模式' }
+                ]"
                 placeholder="选择或输入会话模式"
-                class="input-field"
               />
-              <datalist id="session-mode-list">
-                <option value="HOSTED">HOSTED - 托管模式</option>
-                <option value="COMPONENT">COMPONENT - 组件模式</option>
-                <option value="DROP_IN">DROP_IN - 嵌入模式</option>
-              </datalist>
               <small class="field-desc">{{ sessionModeDescription }}</small>
             </div>
           </div>
@@ -194,10 +186,14 @@
           <div class="form-row-3">
             <div class="form-group">
               <label>请款方式 (Capture Method) <span class="required">*</span></label>
-              <select v-model="checkoutData.captureMethod" class="input-field">
-                <option value="AUTOMATIC">AUTOMATIC - 自动</option>
-                <option value="MANUAL">MANUAL - 手动</option>
-              </select>
+              <SmartSelect
+                v-model="checkoutData.captureMethod"
+                :options="[
+                  { value: 'AUTOMATIC', label: 'AUTOMATIC - 自动' },
+                  { value: 'MANUAL', label: 'MANUAL - 手动' }
+                ]"
+                placeholder="选择或输入请款方式"
+              />
             </div>
 
             <div class="form-group">
@@ -213,11 +209,15 @@
 
             <div class="form-group">
               <label>地址收集 (Address Collection)</label>
-              <select v-model="checkoutData.addressCollection" class="input-field">
-                <option value="AUTO">AUTO - 自动</option>
-                <option value="REQUIRED">REQUIRED - 必需</option>
-                <option value="NONE">NONE - 无</option>
-              </select>
+              <SmartSelect
+                v-model="checkoutData.addressCollection"
+                :options="[
+                  { value: 'AUTO', label: 'AUTO - 自动' },
+                  { value: 'REQUIRED', label: 'REQUIRED - 必需' },
+                  { value: 'NONE', label: 'NONE - 无' }
+                ]"
+                placeholder="选择或输入地址收集方式"
+              />
               <small class="field-desc">默认值：AUTO</small>
             </div>
           </div>
@@ -404,24 +404,21 @@
             </div>
             <div class="form-group">
               <label>账单国家 (Country)</label>
-              <input 
-                v-model="checkoutData.billCountry" 
-                type="text" 
-                list="bill-country-list"
+              <SmartSelect
+                v-model="checkoutData.billCountry"
+                :options="[
+                  { value: 'CN', label: 'CN - 中国' },
+                  { value: 'US', label: 'US - 美国' },
+                  { value: 'GB', label: 'GB - 英国' },
+                  { value: 'FR', label: 'FR - 法国' },
+                  { value: 'JP', label: 'JP - 日本' },
+                  { value: 'SG', label: 'SG - 新加坡' },
+                  { value: 'HK', label: 'HK - 香港' },
+                  { value: 'DE', label: 'DE - 德国' }
+                ]"
                 placeholder="选择或输入国家代码"
-                class="input-field"
                 :disabled="!checkoutData.enableBillInfo"
               />
-              <datalist id="bill-country-list">
-                <option value="CN">CN - 中国</option>
-                <option value="US">US - 美国</option>
-                <option value="GB">GB - 英国</option>
-                <option value="FR">FR - 法国</option>
-                <option value="JP">JP - 日本</option>
-                <option value="SG">SG - 新加坡</option>
-                <option value="HK">HK - 香港</option>
-                <option value="DE">DE - 德国</option>
-              </datalist>
             </div>
             <div class="form-group">
               <label>账单州/省 (State)</label>
@@ -477,18 +474,15 @@
             </div>
             <div class="form-group">
               <label>地址收集 (Address Collection)</label>
-              <input 
-                v-model="checkoutData.billAddressCollection" 
-                type="text" 
-                list="bill-address-collection-list"
+              <SmartSelect
+                v-model="checkoutData.billAddressCollection"
+                :options="[
+                  { value: 'REQUIRED', label: 'REQUIRED - 必填' },
+                  { value: 'AUTO', label: 'AUTO - 自动' }
+                ]"
                 placeholder="选择或输入地址收集方式"
-                class="input-field"
                 :disabled="!checkoutData.enableBillInfo"
               />
-              <datalist id="bill-address-collection-list">
-                <option value="REQUIRED">REQUIRED - 必填</option>
-                <option value="AUTO">AUTO - 自动</option>
-              </datalist>
             </div>
           </div>
 
@@ -566,24 +560,21 @@
             </div>
             <div class="form-group">
               <label>收货国家 (Country)</label>
-              <input 
-                v-model="checkoutData.shipCountry" 
-                type="text" 
-                list="ship-country-list"
+              <SmartSelect
+                v-model="checkoutData.shipCountry"
+                :options="[
+                  { value: 'CN', label: 'CN - 中国' },
+                  { value: 'US', label: 'US - 美国' },
+                  { value: 'GB', label: 'GB - 英国' },
+                  { value: 'FR', label: 'FR - 法国' },
+                  { value: 'JP', label: 'JP - 日本' },
+                  { value: 'SG', label: 'SG - 新加坡' },
+                  { value: 'HK', label: 'HK - 香港' },
+                  { value: 'DE', label: 'DE - 德国' }
+                ]"
                 placeholder="选择或输入国家代码"
-                class="input-field"
                 :disabled="!checkoutData.enableShipInfo"
               />
-              <datalist id="ship-country-list">
-                <option value="CN">CN - 中国</option>
-                <option value="US">US - 美国</option>
-                <option value="GB">GB - 英国</option>
-                <option value="FR">FR - 法国</option>
-                <option value="JP">JP - 日本</option>
-                <option value="SG">SG - 新加坡</option>
-                <option value="HK">HK - 香港</option>
-                <option value="DE">DE - 德国</option>
-              </datalist>
             </div>
             <div class="form-group">
               <label>收货州/省 (State)</label>
@@ -775,6 +766,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Toast from './Toast.vue'
+import SmartSelect from './SmartSelect.vue'
 import { showError, showSuccess, showInfo } from '../utils/toast'
 import { useNavigation } from '../composables/useNavigation'
 import { useMerchantConfig } from '../composables/useMerchantConfig'

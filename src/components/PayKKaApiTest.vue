@@ -42,7 +42,7 @@
           <div class="form-group">
             <label>私钥 (Private Key) <span class="required">*</span></label>
             <div class="private-key-container">
-              <input 
+            <input 
                 v-if="!showPrivateKeyFull"
                 :value="apiConfig.privateKey ? (apiConfig.privateKey.substring(0, 50) + '...') : (selectedMerchantId ? '' : '请先选择商户配置')" 
                 readonly
@@ -74,9 +74,9 @@
 
           <h3>请求头参数 (Headers)</h3>
 
-          <div class="form-group">
+            <div class="form-group">
             <label>x-paykka-appid <span class="required">*</span></label>
-            <input 
+              <input 
               :value="apiConfig.appId || (selectedMerchantId ? '' : '请先选择商户配置')" 
               type="text" 
               readonly
@@ -96,10 +96,10 @@
               <div class="input-with-button">
                 <input 
                   v-model="transactionData.transId" 
-                  type="text" 
-                  placeholder="自动生成"
-                  class="input-field"
-                />
+                type="text" 
+                placeholder="自动生成"
+                class="input-field"
+              />
                 <button @click="generateTransId" class="btn-small">随机生成</button>
               </div>
             </div>
@@ -107,36 +107,34 @@
             <div class="form-group">
               <label>交易金额 (Amount)</label>
               <div class="input-with-button">
-                <input 
-                  v-model.number="transactionData.amount" 
-                  type="number" 
-                  step="0.01"
-                  placeholder="0.00"
-                  class="input-field"
-                />
+              <input 
+                v-model.number="transactionData.amount" 
+                type="number" 
+                step="0.01"
+                placeholder="0.00"
+                class="input-field"
+              />
                 <button @click="generateRandomAmount" class="btn-small">随机金额</button>
-              </div>
             </div>
+          </div>
 
             <div class="form-group">
               <label>币种 (Currency)</label>
               <div class="input-with-button">
-                <input 
-                  v-model="transactionData.currency" 
-                  type="text" 
-                  list="currency-list"
+                <SmartSelect
+                  v-model="transactionData.currency"
+                  :options="[
+                    { value: 'USD', label: 'USD - 美元' },
+                    { value: 'EUR', label: 'EUR - 欧元' },
+                    { value: 'GBP', label: 'GBP - 英镑' },
+                    { value: 'CNY', label: 'CNY - 人民币' },
+                    { value: 'JPY', label: 'JPY - 日元' },
+                    { value: 'HKD', label: 'HKD - 港币' },
+                    { value: 'SGD', label: 'SGD - 新加坡元' }
+                  ]"
                   placeholder="选择或输入币种"
-                  class="input-field"
+                  style="flex: 1;"
                 />
-                <datalist id="currency-list">
-                  <option value="USD">USD - 美元</option>
-                  <option value="EUR">EUR - 欧元</option>
-                  <option value="GBP">GBP - 英镑</option>
-                  <option value="CNY">CNY - 人民币</option>
-                  <option value="JPY">JPY - 日元</option>
-                  <option value="HKD">HKD - 港币</option>
-                  <option value="SGD">SGD - 新加坡元</option>
-                </datalist>
                 <button @click="generateRandomCurrency" class="btn-small">随机币种</button>
               </div>
             </div>
@@ -145,29 +143,30 @@
           <div class="form-row-2">
             <div class="form-group">
               <label>支付类型 (Payment Type) <span class="required">*</span></label>
-              <input 
-                v-model="transactionData.paymentType" 
-                type="text" 
-                list="payment-type-list"
+              <SmartSelect
+                v-model="transactionData.paymentType"
+                :options="[
+                  { value: 'PURCHASE', label: 'PURCHASE - 消费' },
+                  { value: 'PREPARE_AUTHORIZE', label: 'PREPARE_AUTHORIZE - 预授权' },
+                  { value: 'RECURRING', label: 'RECURRING - 循环支付' },
+                  { value: 'REFUND', label: 'REFUND - 退款' }
+                ]"
                 placeholder="选择或输入支付类型"
-                class="input-field"
               />
-              <datalist id="payment-type-list">
-                <option value="PURCHASE">PURCHASE - 消费</option>
-                <option value="PREPARE_AUTHORIZE">PREPARE_AUTHORIZE - 预授权</option>
-                <option value="RECURRING">RECURRING - 循环支付</option>
-                <option value="REFUND">REFUND - 退款</option>
-              </datalist>
               <small class="field-desc">默认值：PURCHASE</small>
             </div>
 
             <div class="form-group">
               <label>交易类型 (Transaction Type)</label>
-              <select v-model="transactionData.transactionType" class="input-field">
-                <option value="payment">支付 (Payment)</option>
-                <option value="refund">退款 (Refund)</option>
-                <option value="query">查询 (Query)</option>
-              </select>
+              <SmartSelect
+                v-model="transactionData.transactionType"
+                :options="[
+                  { value: 'payment', label: '支付 (Payment)' },
+                  { value: 'refund', label: '退款 (Refund)' },
+                  { value: 'query', label: '查询 (Query)' }
+                ]"
+                placeholder="选择或输入交易类型"
+              />
             </div>
           </div>
 
@@ -185,10 +184,14 @@
           <div class="form-row-3">
             <div class="form-group">
               <label>请款方式 (Capture Method) <span class="required">*</span></label>
-              <select v-model="transactionData.captureMethod" class="input-field">
-                <option value="AUTOMATIC">AUTOMATIC - 自动</option>
-                <option value="MANUAL">MANUAL - 手动</option>
-              </select>
+              <SmartSelect
+                v-model="transactionData.captureMethod"
+                :options="[
+                  { value: 'AUTOMATIC', label: 'AUTOMATIC - 自动' },
+                  { value: 'MANUAL', label: 'MANUAL - 手动' }
+                ]"
+                placeholder="选择或输入请款方式"
+              />
             </div>
 
             <div class="form-group">
@@ -204,11 +207,15 @@
 
             <div class="form-group">
               <label>地址收集 (Address Collection)</label>
-              <select v-model="transactionData.addressCollection" class="input-field">
-                <option value="AUTO">AUTO - 自动</option>
-                <option value="REQUIRED">REQUIRED - 必需</option>
-                <option value="NONE">NONE - 无</option>
-              </select>
+              <SmartSelect
+                v-model="transactionData.addressCollection"
+                :options="[
+                  { value: 'AUTO', label: 'AUTO - 自动' },
+                  { value: 'REQUIRED', label: 'REQUIRED - 必需' },
+                  { value: 'NONE', label: 'NONE - 无' }
+                ]"
+                placeholder="选择或输入地址收集方式"
+              />
               <small class="field-desc">默认值：AUTO</small>
             </div>
           </div>
@@ -260,7 +267,12 @@
           <div class="divider"></div>
 
           <div class="section-header">
-            <h3>支付信息 (Payment Info)</h3>
+            <div class="section-header-title" @click="sectionCollapsed.paymentInfo = !sectionCollapsed.paymentInfo" style="cursor: pointer;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem; transition: transform 0.3s;" :style="{ transform: sectionCollapsed.paymentInfo ? 'rotate(-90deg)' : 'rotate(0deg)' }">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+              <h3>支付信息 (Payment Info)</h3>
+            </div>
             <div class="section-header-actions">
               <button 
                 @click="generatePaymentInfo" 
@@ -276,16 +288,21 @@
               </label>
             </div>
           </div>
-          <div class="form-row-3" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
+          <div v-show="!sectionCollapsed.paymentInfo" class="form-row-3" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
             <div class="form-group">
               <label>支付方式 (Payment Method)</label>
-              <select v-model="transactionData.paymentMethod" class="input-field" :disabled="!transactionData.enablePaymentInfo">
-                <option value="BANKCARD">BANKCARD - 银行卡</option>
-                <option value="ALIPAY">ALIPAY - 支付宝</option>
-                <option value="WECHATPAY">WECHATPAY - 微信支付</option>
-                <option value="APPLEPAY">APPLEPAY - Apple Pay</option>
-                <option value="GOOGLEPAY">GOOGLEPAY - Google Pay</option>
-              </select>
+              <SmartSelect
+                v-model="transactionData.paymentMethod"
+                :options="[
+                  { value: 'BANKCARD', label: 'BANKCARD - 银行卡' },
+                  { value: 'ALIPAY', label: 'ALIPAY - 支付宝' },
+                  { value: 'WECHATPAY', label: 'WECHATPAY - 微信支付' },
+                  { value: 'APPLEPAY', label: 'APPLEPAY - Apple Pay' },
+                  { value: 'GOOGLEPAY', label: 'GOOGLEPAY - Google Pay' }
+                ]"
+                placeholder="选择或输入支付方式"
+                :disabled="!transactionData.enablePaymentInfo"
+              />
             </div>
             <div class="form-group">
               <label>购物者参考 (Shopper Reference)</label>
@@ -308,7 +325,7 @@
               />
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
+          <div v-show="!sectionCollapsed.paymentInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
             <div class="form-group">
               <label>卡号 (Card No)</label>
               <input 
@@ -350,7 +367,7 @@
               />
             </div>
           </div>
-          <div class="form-row-2" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
+          <div v-show="!sectionCollapsed.paymentInfo" class="form-row-2" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
             <div class="form-group">
               <label>CVV</label>
               <input 
@@ -366,7 +383,12 @@
           <div class="divider"></div>
 
           <div class="section-header">
-            <h3>浏览器信息 (Browser Info)</h3>
+            <div class="section-header-title" @click="sectionCollapsed.browserInfo = !sectionCollapsed.browserInfo" style="cursor: pointer;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem; transition: transform 0.3s;" :style="{ transform: sectionCollapsed.browserInfo ? 'rotate(-90deg)' : 'rotate(0deg)' }">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+              <h3>浏览器信息 (Browser Info)</h3>
+            </div>
             <div class="section-header-actions">
               <button 
                 @click="generateBrowserInfo" 
@@ -382,7 +404,7 @@
               </label>
             </div>
           </div>
-          <div class="form-row-3" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
+          <div v-show="!sectionCollapsed.browserInfo" class="form-row-3" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
             <div class="form-group">
               <label>用户代理 (User Agent)</label>
               <input 
@@ -414,42 +436,62 @@
               />
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
+          <div v-show="!sectionCollapsed.browserInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
             <div class="form-group">
               <label>Java 启用 (Java Enabled)</label>
-              <select v-model="transactionData.javaEnabled" class="input-field" :disabled="!transactionData.enableBrowserInfo">
-                <option :value="true">true</option>
-                <option :value="false">false</option>
-              </select>
+              <SmartSelect
+                v-model="javaEnabledText"
+                :options="[
+                  { value: 'true', label: 'true' },
+                  { value: 'false', label: 'false' }
+                ]"
+                placeholder="选择或输入 true/false"
+                :disabled="!transactionData.enableBrowserInfo"
+              />
             </div>
             <div class="form-group">
               <label>设备类型 (Device Type)</label>
-              <select v-model="transactionData.deviceType" class="input-field" :disabled="!transactionData.enableBrowserInfo">
-                <option value="PC">PC</option>
-                <option value="MOBILE">MOBILE</option>
-                <option value="TABLET">TABLET</option>
-              </select>
+              <SmartSelect
+                v-model="transactionData.deviceType"
+                :options="[
+                  { value: 'PC', label: 'PC' },
+                  { value: 'MOBILE', label: 'MOBILE' },
+                  { value: 'TABLET', label: 'TABLET' }
+                ]"
+                placeholder="选择或输入设备类型"
+                :disabled="!transactionData.enableBrowserInfo"
+              />
             </div>
             <div class="form-group">
               <label>终端类型 (Terminal Type)</label>
-              <select v-model="transactionData.terminalType" class="input-field" :disabled="!transactionData.enableBrowserInfo">
-                <option value="WEB">WEB</option>
-                <option value="APP">APP</option>
-                <option value="WAP">WAP</option>
-              </select>
+              <SmartSelect
+                v-model="transactionData.terminalType"
+                :options="[
+                  { value: 'WEB', label: 'WEB' },
+                  { value: 'APP', label: 'APP' },
+                  { value: 'WAP', label: 'WAP' }
+                ]"
+                placeholder="选择或输入终端类型"
+                :disabled="!transactionData.enableBrowserInfo"
+              />
             </div>
             <div class="form-group">
               <label>设备操作系统 (Device OS)</label>
-              <select v-model="transactionData.deviceOs" class="input-field" :disabled="!transactionData.enableBrowserInfo">
-                <option value="WINDOWS">WINDOWS</option>
-                <option value="MACOS">MACOS</option>
-                <option value="LINUX">LINUX</option>
-                <option value="ANDROID">ANDROID</option>
-                <option value="IOS">IOS</option>
-              </select>
+              <SmartSelect
+                v-model="transactionData.deviceOs"
+                :options="[
+                  { value: 'WINDOWS', label: 'WINDOWS' },
+                  { value: 'MACOS', label: 'MACOS' },
+                  { value: 'LINUX', label: 'LINUX' },
+                  { value: 'ANDROID', label: 'ANDROID' },
+                  { value: 'IOS', label: 'IOS' }
+                ]"
+                placeholder="选择或输入设备操作系统"
+                :disabled="!transactionData.enableBrowserInfo"
+              />
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
+          <div v-show="!sectionCollapsed.browserInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
             <div class="form-group">
               <label>时区偏移 (Timezone Offset)</label>
               <input 
@@ -491,7 +533,7 @@
               />
             </div>
           </div>
-          <div class="form-row-1" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
+          <div v-show="!sectionCollapsed.browserInfo" class="form-row-1" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
             <div class="form-group">
               <label>Cookies</label>
               <textarea 
@@ -508,7 +550,12 @@
           <div class="divider"></div>
 
           <div class="section-header">
-            <h3>客户信息 (Customer Info) <span class="required">*</span></h3>
+            <div class="section-header-title" @click="sectionCollapsed.customerInfo = !sectionCollapsed.customerInfo" style="cursor: pointer;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem; transition: transform 0.3s;" :style="{ transform: sectionCollapsed.customerInfo ? 'rotate(-90deg)' : 'rotate(0deg)' }">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+              <h3>客户信息 (Customer Info) <span class="required">*</span></h3>
+            </div>
             <div class="section-header-actions">
               <button 
                 @click="generateAllCustomerInfo" 
@@ -524,7 +571,7 @@
               </label>
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableCustomerInfo }">
+          <div v-show="!sectionCollapsed.customerInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enableCustomerInfo }">
             <div class="form-group">
               <label>客户姓名 (Name) <span class="required">*</span></label>
               <input 
@@ -566,7 +613,7 @@
               />
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableCustomerInfo }">
+          <div v-show="!sectionCollapsed.customerInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enableCustomerInfo }">
             <div class="form-group">
               <label>订单IP (Order IP) <span class="required">*</span></label>
               <input 
@@ -592,7 +639,12 @@
           <div class="divider"></div>
 
           <div class="section-header">
-            <h3>账单信息 (Billing Info)</h3>
+            <div class="section-header-title" @click="sectionCollapsed.billInfo = !sectionCollapsed.billInfo" style="cursor: pointer;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem; transition: transform 0.3s;" :style="{ transform: sectionCollapsed.billInfo ? 'rotate(-90deg)' : 'rotate(0deg)' }">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+              <h3>账单信息 (Billing Info)</h3>
+            </div>
             <div class="section-header-actions">
               <button 
                 @click="generateAllBillInfo" 
@@ -608,7 +660,7 @@
               </label>
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBillInfo }">
+          <div v-show="!sectionCollapsed.billInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBillInfo }">
             <div class="form-group">
               <label>账单名 (First Name)</label>
               <input 
@@ -650,7 +702,7 @@
               />
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBillInfo }">
+          <div v-show="!sectionCollapsed.billInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBillInfo }">
             <div class="form-group">
               <label>账单地址 (Address Line1)</label>
               <input 
@@ -663,24 +715,21 @@
             </div>
             <div class="form-group">
               <label>账单国家 (Country)</label>
-              <input 
-                v-model="transactionData.billCountry" 
-                type="text" 
-                list="bill-country-list"
+              <SmartSelect
+                v-model="transactionData.billCountry"
+                :options="[
+                  { value: 'CN', label: 'CN - 中国' },
+                  { value: 'US', label: 'US - 美国' },
+                  { value: 'GB', label: 'GB - 英国' },
+                  { value: 'FR', label: 'FR - 法国' },
+                  { value: 'JP', label: 'JP - 日本' },
+                  { value: 'SG', label: 'SG - 新加坡' },
+                  { value: 'HK', label: 'HK - 香港' },
+                  { value: 'DE', label: 'DE - 德国' }
+                ]"
                 placeholder="选择或输入国家代码"
-                class="input-field"
                 :disabled="!transactionData.enableBillInfo"
               />
-              <datalist id="bill-country-list">
-                <option value="CN">CN - 中国</option>
-                <option value="US">US - 美国</option>
-                <option value="GB">GB - 英国</option>
-                <option value="FR">FR - 法国</option>
-                <option value="JP">JP - 日本</option>
-                <option value="SG">SG - 新加坡</option>
-                <option value="HK">HK - 香港</option>
-                <option value="DE">DE - 德国</option>
-              </datalist>
             </div>
             <div class="form-group">
               <label>账单州/省 (State)</label>
@@ -703,7 +752,7 @@
               />
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBillInfo }">
+          <div v-show="!sectionCollapsed.billInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enableBillInfo }">
             <div class="form-group">
               <label>账单邮编 (Postal Code)</label>
               <input 
@@ -736,25 +785,27 @@
             </div>
             <div class="form-group">
               <label>地址收集 (Address Collection)</label>
-              <input 
-                v-model="transactionData.billAddressCollection" 
-                type="text" 
-                list="bill-address-collection-list"
+              <SmartSelect
+                v-model="transactionData.billAddressCollection"
+                :options="[
+                  { value: 'REQUIRED', label: 'REQUIRED - 必填' },
+                  { value: 'AUTO', label: 'AUTO - 自动' }
+                ]"
                 placeholder="选择或输入地址收集方式"
-                class="input-field"
                 :disabled="!transactionData.enableBillInfo"
               />
-              <datalist id="bill-address-collection-list">
-                <option value="REQUIRED">REQUIRED - 必填</option>
-                <option value="AUTO">AUTO - 自动</option>
-              </datalist>
             </div>
           </div>
 
           <div class="divider"></div>
 
           <div class="section-header">
-            <h3>收货信息 (Shipping Info)</h3>
+            <div class="section-header-title" @click="sectionCollapsed.shipInfo = !sectionCollapsed.shipInfo" style="cursor: pointer;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem; transition: transform 0.3s;" :style="{ transform: sectionCollapsed.shipInfo ? 'rotate(-90deg)' : 'rotate(0deg)' }">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+              <h3>收货信息 (Shipping Info)</h3>
+            </div>
             <div class="section-header-actions">
               <button 
                 @click="generateAllShipInfo" 
@@ -770,7 +821,7 @@
               </label>
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableShipInfo }">
+          <div v-show="!sectionCollapsed.shipInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enableShipInfo }">
             <div class="form-group">
               <label>收货名 (First Name)</label>
               <input 
@@ -812,7 +863,7 @@
               />
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableShipInfo }">
+          <div v-show="!sectionCollapsed.shipInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enableShipInfo }">
             <div class="form-group">
               <label>收货地址 (Address Line1)</label>
               <input 
@@ -825,24 +876,21 @@
             </div>
             <div class="form-group">
               <label>收货国家 (Country)</label>
-              <input 
-                v-model="transactionData.shipCountry" 
-                type="text" 
-                list="ship-country-list"
+              <SmartSelect
+                v-model="transactionData.shipCountry"
+                :options="[
+                  { value: 'CN', label: 'CN - 中国' },
+                  { value: 'US', label: 'US - 美国' },
+                  { value: 'GB', label: 'GB - 英国' },
+                  { value: 'FR', label: 'FR - 法国' },
+                  { value: 'JP', label: 'JP - 日本' },
+                  { value: 'SG', label: 'SG - 新加坡' },
+                  { value: 'HK', label: 'HK - 香港' },
+                  { value: 'DE', label: 'DE - 德国' }
+                ]"
                 placeholder="选择或输入国家代码"
-                class="input-field"
                 :disabled="!transactionData.enableShipInfo"
               />
-              <datalist id="ship-country-list">
-                <option value="CN">CN - 中国</option>
-                <option value="US">US - 美国</option>
-                <option value="GB">GB - 英国</option>
-                <option value="FR">FR - 法国</option>
-                <option value="JP">JP - 日本</option>
-                <option value="SG">SG - 新加坡</option>
-                <option value="HK">HK - 香港</option>
-                <option value="DE">DE - 德国</option>
-              </datalist>
             </div>
             <div class="form-group">
               <label>收货州/省 (State)</label>
@@ -865,7 +913,7 @@
               />
             </div>
           </div>
-          <div class="form-row-4" :class="{ 'disabled-section': !transactionData.enableShipInfo }">
+          <div v-show="!sectionCollapsed.shipInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enableShipInfo }">
             <div class="form-group">
               <label>收货邮编 (Postal Code)</label>
               <input 
@@ -894,7 +942,6 @@
               {{ loading ? '处理中...' : '提交交易' }}
             </button>
             <button @click="resetForm" class="btn-secondary">重置表单</button>
-            <button @click="testConnection" :disabled="loading" class="btn-info">测试连接</button>
           </div>
         </div>
 
@@ -949,36 +996,89 @@
           <h2>测试结果</h2>
           
           <div v-if="!result" class="empty-state">
-            <p>暂无测试结果，请提交交易进行测试</p>
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 1rem; opacity: 0.3;">
+              <path d="M9 12l2 2 4-4"></path>
+              <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+              <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
+              <path d="M12 21c0-1-1-3-3-3s-3 2-3 3 1 3 3 3 3-2 3-3"></path>
+              <path d="M12 3c0 1-1 3-3 3S6 4 6 3s1-3 3-3 3 2 3 3"></path>
+            </svg>
+            <p>暂无测试结果</p>
+            <p class="empty-state-desc">请提交交易进行测试</p>
           </div>
 
           <div v-else class="result-content">
             <div class="result-header">
+              <div class="result-status-group">
               <span class="status-badge" :class="result.status">
+                  <svg v-if="result.status === 'success'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <svg v-else-if="result.status === 'error'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
                 {{ result.status === 'success' ? '成功' : result.status === 'error' ? '失败' : '进行中' }}
               </span>
-              <span class="timestamp">{{ result.timestamp }}</span>
+                <span class="timestamp">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  {{ result.timestamp }}
+                </span>
+              </div>
             </div>
 
             <div class="result-body">
-              <div class="result-item">
-                <label>请求URL:</label>
-                <code>{{ result.requestUrl }}</code>
+              <div v-if="result.responseData" class="result-section-item">
+                <div class="result-section-header" @click="resultCollapsed.responseData = !resultCollapsed.responseData">
+                  <div class="result-section-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem; transition: transform 0.3s;" :style="{ transform: resultCollapsed.responseData ? 'rotate(-90deg)' : 'rotate(0deg)' }">
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                    <label>API响应结果</label>
+              </div>
+                  <button @click.stop="copyResultText(formatJson(result.responseData))" class="btn-copy-small" title="复制">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+              </div>
+                <div v-show="!resultCollapsed.responseData" class="result-section-content">
+                  <pre class="code-block success">{{ formatJson(result.responseData) }}</pre>
+                </div>
               </div>
 
-              <div class="result-item">
-                <label>响应数据:</label>
-                <pre class="code-block">{{ formatJson(result.responseData) }}</pre>
-              </div>
-
-              <div v-if="result.error" class="result-item error">
-                <label>错误信息:</label>
+              <div v-if="result.error" class="result-section-item error">
+                <div class="result-section-header" @click="resultCollapsed.error = !resultCollapsed.error">
+                  <div class="result-section-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem; transition: transform 0.3s;" :style="{ transform: resultCollapsed.error ? 'rotate(-90deg)' : 'rotate(0deg)' }">
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                    <label>错误信息</label>
+                  </div>
+                  <button @click.stop="copyResultText(result.error)" class="btn-copy-small" title="复制">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div v-show="!resultCollapsed.error" class="result-section-content">
                 <pre class="code-block error-text">{{ result.error }}</pre>
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
     </div>
     
     <!-- Toast 提示 -->
@@ -989,8 +1089,9 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import Toast from './Toast.vue'
+import SmartSelect from './SmartSelect.vue'
 import { payKKaApi } from '../services/paykkaApi'
-import { showError, showSuccess } from '../utils/toast'
+import { showError, showSuccess, showInfo } from '../utils/toast'
 import { useNavigation } from '../composables/useNavigation'
 import { useMerchantConfig } from '../composables/useMerchantConfig'
 import { 
@@ -1148,6 +1249,41 @@ const result = ref(null)
 const isJsonCollapsed = ref(false)
 const editableJson = ref('')
 const isManuallyEditingJson = ref(false) // 标记用户是否正在手动编辑JSON
+
+// 各个信息部分的折叠状态（默认折叠，减少页面显示）
+const sectionCollapsed = reactive({
+  paymentInfo: true,
+  browserInfo: true,
+  customerInfo: false, // 客户信息默认展开（必填）
+  billInfo: true,
+  shipInfo: true
+})
+
+// 测试结果部分的折叠状态
+const resultCollapsed = reactive({
+  responseData: false,
+  error: false
+})
+
+// Java Enabled 文本输入处理（布尔值转文本）
+const javaEnabledText = computed({
+  get: () => {
+    if (transactionData.javaEnabled === true || transactionData.javaEnabled === 'true') return 'true'
+    if (transactionData.javaEnabled === false || transactionData.javaEnabled === 'false') return 'false'
+    return String(transactionData.javaEnabled || 'false')
+  },
+  set: (val) => {
+    if (val === 'true' || val === true) {
+      transactionData.javaEnabled = true
+    } else if (val === 'false' || val === false) {
+      transactionData.javaEnabled = false
+    } else {
+      // 尝试解析
+      const lowerVal = String(val).toLowerCase().trim()
+      transactionData.javaEnabled = lowerVal === 'true' || lowerVal === '1' || lowerVal === 'yes'
+    }
+  }
+})
 
 // 随机生成交易ID
 const generateTransId = () => {
@@ -1913,6 +2049,35 @@ const copyJson = async () => {
   }
 }
 
+// 复制测试结果文本到剪贴板
+const copyResultText = async (text) => {
+  if (!text) {
+    showInfo('内容为空，无法复制')
+    return
+  }
+  try {
+    const textToCopy = typeof text === 'string' ? text : formatJson(text)
+    // 优先使用 Clipboard API（需要 HTTPS 或 localhost）
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(textToCopy)
+      showSuccess('已复制到剪贴板')
+    } else {
+      // 降级方案：使用传统方法（适用于局域网 IP 等非安全上下文）
+      fallbackCopyToClipboard(textToCopy)
+      showSuccess('已复制到剪贴板')
+    }
+  } catch (err) {
+    // 如果 Clipboard API 失败，使用降级方案
+    try {
+      const textToCopy = typeof text === 'string' ? text : formatJson(text)
+      fallbackCopyToClipboard(textToCopy)
+      showSuccess('已复制到剪贴板')
+    } catch (e) {
+      showError('复制失败，请手动复制')
+    }
+  }
+}
+
 // 重置表单
 const resetForm = () => {
   transactionData.transId = ''
@@ -1996,31 +2161,6 @@ const resetForm = () => {
   result.value = null
 }
 
-// 测试连接
-const testConnection = async () => {
-  loading.value = true
-  try {
-    const response = await payKKaApi.testConnection(apiConfig.baseUrl)
-    result.value = {
-      status: 'success',
-      timestamp: new Date().toLocaleString('zh-CN'),
-      requestUrl: `${apiConfig.baseUrl}/health`,
-      requestData: {},
-      responseData: response
-    }
-  } catch (error) {
-    result.value = {
-      status: 'error',
-      timestamp: new Date().toLocaleString('zh-CN'),
-      requestUrl: `${apiConfig.baseUrl}/health`,
-      requestData: {},
-      responseData: null,
-      error: error.message
-    }
-  } finally {
-    loading.value = false
-  }
-}
 
 // 验证JSON数据
 const validateJsonData = () => {
@@ -2029,7 +2169,7 @@ const validateJsonData = () => {
   
   // 只有当客户信息开关启用时，才验证客户信息字段
   if (transactionData.enableCustomerInfo) {
-    // 验证必填字段
+  // 验证必填字段
     if (!transactionData.customerName || transactionData.customerName.trim() === '') {
       showError('客户姓名 (Name) 不能为空')
       return null
@@ -2272,7 +2412,7 @@ const submitTransaction = async () => {
       timestamp: new Date().toLocaleString('zh-CN'),
       requestUrl: `${apiConfig.baseUrl}/v3/payment/acq`,
       requestData: requestData,
-      responseData: response
+      responseData: response.data || response // 只保存API返回的响应数据
     }
   } catch (error) {
     result.value = {
@@ -2353,23 +2493,25 @@ onMounted(() => {
 .test-panel {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
-  gap: 0.8rem;
+  gap: 1rem;
   background: white;
-  border-radius: 6px;
-  padding: 0.8rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 1.2rem;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
   min-height: calc(100vh - 60px);
   max-height: calc(100vh - 60px);
   overflow: hidden;
   width: 100%;
   box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .form-section {
   overflow-y: auto;
   overflow-x: hidden;
   max-height: calc(100vh - 100px);
-  padding-right: 0.6rem;
+  padding-right: 0.8rem;
+  padding-left: 0.2rem;
 }
 
 .form-section::-webkit-scrollbar {
@@ -2393,30 +2535,89 @@ onMounted(() => {
 .form-section h2,
 .result-section h2 {
   color: #333;
-  margin-bottom: 0.4rem;
-  font-size: 1rem;
-  border-bottom: 2px solid #667eea;
-  padding-bottom: 0.2rem;
+  margin-bottom: 1rem;
+  margin-top: 0;
+  font-size: 1.1rem;
+  border-bottom: 3px solid #667eea;
+  padding-bottom: 0.4rem;
   font-weight: 600;
+  position: relative;
+}
+
+.form-section h2::after,
+.result-section h2::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 2px;
 }
 
 .form-section h3 {
   color: #555;
-  margin: 0.5rem 0 0.3rem 0;
-  font-size: 0.9rem;
-  font-weight: 500;
+  margin: 1rem 0 0.6rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding-left: 0.5rem;
+  border-left: 3px solid #667eea;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.3rem;
+  margin: 1rem 0 0.6rem 0;
+  padding: 0.6rem 0.8rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
 }
 
-.section-header h3 {
-  margin: 0;
+.section-header:hover {
+  background: linear-gradient(135deg, #f0f2f5 0%, #e8ebef 100%);
+  border-color: #d0d0d0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.section-header-title {
+  display: flex;
+  align-items: center;
   flex: 1;
+  user-select: none;
+  padding: 0.4rem 0.6rem;
+  margin: -0.4rem -0.6rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.section-header-title:hover {
+  background-color: rgba(102, 126, 234, 0.12);
+  transform: translateX(2px);
+}
+
+.section-header-title h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #333;
+  pointer-events: none;
+}
+
+.section-header-title svg {
+  flex-shrink: 0;
+  color: #667eea;
+  transition: transform 0.3s ease, color 0.2s ease;
+}
+
+.section-header-title:hover svg {
+  color: #5568d3;
 }
 
 .section-header-actions {
@@ -2496,19 +2697,37 @@ onMounted(() => {
 }
 
 .disabled-section {
-  opacity: 0.5;
+  opacity: 0.6;
   pointer-events: none;
+  position: relative;
+}
+
+.disabled-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  z-index: 1;
 }
 
 .disabled-section .input-field:disabled,
 .disabled-section .btn-small:disabled {
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.7;
+  border-color: #d0d0d0;
 }
 
 .form-group {
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
 }
 
 .form-group label {
@@ -2521,14 +2740,25 @@ onMounted(() => {
 
 .input-field {
   width: 100%;
-  padding: 0.35rem 0.5rem;
+  padding: 0.4rem 0.6rem;
   border: 1.5px solid #e0e0e0;
-  border-radius: 3px;
+  border-radius: 5px;
   font-size: 0.85rem;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
   box-sizing: border-box;
   background: #fff;
-  line-height: 1.3;
+  line-height: 1.4;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: #fafbff;
+}
+
+.input-field:hover:not(:disabled) {
+  border-color: #d0d0d0;
 }
 
 .input-field:focus {
@@ -2543,9 +2773,15 @@ onMounted(() => {
 
 .input-field.readonly,
 .textarea.readonly {
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
   cursor: not-allowed;
   color: #666;
+  border-color: #d0d0d0;
+}
+
+.input-field.readonly:hover,
+.textarea.readonly:hover {
+  border-color: #c0c0c0;
 }
 
 .textarea {
@@ -2557,10 +2793,13 @@ onMounted(() => {
 
 .field-desc {
   display: block;
-  margin-top: 0.15rem;
-  color: #666;
-  font-size: 0.7rem;
-  line-height: 1.2;
+  margin-top: 0.25rem;
+  color: #888;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  font-style: italic;
+  padding-left: 0.3rem;
+  border-left: 2px solid #e0e0e0;
 }
 
 .required {
@@ -2635,28 +2874,57 @@ onMounted(() => {
 .form-row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
 }
 
 .form-row-4 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 0.4rem;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
 }
 
 .divider {
-  height: 1px;
-  background: linear-gradient(to right, transparent, #e0e0e0, transparent);
-  margin: 0.5rem 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #e0e0e0 20%, #e0e0e0 80%, transparent);
+  margin: 1rem 0;
+  position: relative;
+}
+
+.divider::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  background: #667eea;
+  border-radius: 50%;
+  opacity: 0.5;
 }
 
 .button-group {
   display: flex;
   flex-direction: row;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1.5px solid #e0e0e0;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 2px solid #e0e0e0;
+  flex-wrap: wrap;
+}
+
+.button-group button {
+  flex: 1;
+  min-width: 120px;
 }
 
 .btn-primary,
@@ -2791,94 +3059,245 @@ onMounted(() => {
 .empty-state {
   text-align: center;
   color: #999;
-  padding: 4rem 2rem;
-  font-size: 1.1rem;
+  padding: 3rem 2rem;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+  border-radius: 8px;
+  border: 2px dashed #e0e0e0;
+}
+
+.empty-state svg {
+  display: block;
+  margin: 0 auto 1rem;
+}
+
+.empty-state p {
+  margin: 0.5rem 0;
+  color: #666;
+}
+
+.empty-state-desc {
+  font-size: 0.85rem;
+  color: #999;
 }
 
 .result-content {
   background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
+  border-radius: 10px;
+  padding: 1.2rem;
   border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .result-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.result-status-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .status-badge {
   padding: 0.5rem 1rem;
   border-radius: 20px;
-  font-weight: 500;
-  font-size: 0.9rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
 .status-badge.success {
-  background: #d4edda;
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
   color: #155724;
+  border: 1px solid #b8dacc;
 }
 
 .status-badge.error {
-  background: #f8d7da;
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
   color: #721c24;
+  border: 1px solid #f1b0b7;
 }
 
 .status-badge.pending {
-  background: #fff3cd;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
   color: #856404;
+  border: 1px solid #ffe082;
 }
 
 .timestamp {
   color: #666;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
-.result-item {
-  margin-bottom: 0.8rem;
-}
-
-.result-item label {
-  display: block;
-  margin-bottom: 0.4rem;
-  color: #333;
-  font-weight: 600;
-  font-size: 0.8rem;
-}
-
-.code-block {
-  background: #f4f4f4;
-  padding: 0.8rem 1rem;
-  border-radius: 6px;
-  overflow-x: auto;
-  font-size: 0.8rem;
-  line-height: 1.5;
+.result-section-item {
+  margin-bottom: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
   border: 1px solid #e0e0e0;
-  max-height: 300px;
-  overflow-y: auto;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-.result-item.error .code-block {
+.result-section-item:hover {
+  border-color: #d0d0d0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.result-section-item.error {
   background: #fff5f5;
   border-color: #fc8181;
 }
 
-.error-text {
+.result-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.result-section-header:hover {
+  background: linear-gradient(135deg, #f0f2f5 0%, #e8ebef 100%);
+}
+
+.result-section-item.error .result-section-header {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
+}
+
+.result-section-title {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.result-section-title label {
+  color: #333;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+.result-section-item.error .result-section-title label {
   color: #c53030;
 }
 
-code {
-  background: #f4f4f4;
-  padding: 0.2rem 0.4rem;
+.btn-copy-small {
+  padding: 0.3rem 0.5rem;
+  background: #667eea;
+  color: white;
+  border: none;
   border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.2s ease;
+  opacity: 0.8;
+}
+
+.btn-copy-small:hover {
+  background: #5568d3;
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+}
+
+.result-section-content {
+  padding: 1rem;
+  background: white;
+}
+
+.code-block {
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
   font-size: 0.8rem;
+  line-height: 1.6;
+  border: 1px solid #e0e0e0;
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  margin: 0;
+  transition: all 0.3s ease;
+}
+
+.code-block::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.code-block::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.code-block::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 4px;
+}
+
+.code-block::-webkit-scrollbar-thumb:hover {
+  background: #5568d3;
+}
+
+.code-block.success {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-color: #bae6fd;
+}
+
+.code-block.error-text {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
+  border-color: #fc8181;
+  color: #c53030;
+}
+
+.error-text {
+  color: #c53030;
+  font-weight: 500;
+}
+
+code {
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+  padding: 0.3rem 0.6rem;
+  border-radius: 5px;
+  font-size: 0.85rem;
   word-break: break-all;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  border: 1px solid #e0e0e0;
+  display: inline-block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.result-code {
+  display: block;
+  padding: 0.8rem 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  font-size: 0.85rem;
+  word-break: break-all;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 .json-header {
