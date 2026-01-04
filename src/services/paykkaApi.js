@@ -105,7 +105,7 @@ export async function submitTransaction(baseUrl, merchantId, apiKey, transaction
     // 构建请求参数（使用下划线命名，与 PayKKaCheckoutBase 保持一致）
     const requestParams = {
       merchant_id: merchantId,
-      trans_id: transactionData.transId || transactionData.orderNo,
+      trans_id: transactionData.transId,
       amount: transactionData.amount,
       currency: transactionData.currency,
       payment_type: transactionData.paymentType || 'PURCHASE',

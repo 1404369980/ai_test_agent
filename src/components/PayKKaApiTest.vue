@@ -1205,7 +1205,6 @@ const getDefaultCancelUrl = () => {
 
 const transactionData = reactive({
   transId: '',
-  orderNo: '',
   amount: 0,
   currency: 'USD',
   paymentType: 'PURCHASE',
@@ -1347,13 +1346,6 @@ const generateTransId = () => {
   const timestamp = Date.now()
   const random = Math.floor(Math.random() * 100000)
   transactionData.transId = `TXN${timestamp}${random}`
-  // 同时更新 orderNo（用于向后兼容）
-  transactionData.orderNo = transactionData.transId
-}
-
-// 生成订单号（向后兼容）
-const generateOrderNo = () => {
-  generateTransId()
 }
 
 // 构建 customer JSON 对象（从表单字段）
@@ -1764,8 +1756,7 @@ const buildRequestParams = () => {
     // 构建请求参数
     const params = {
       merchant_id: apiConfig.merchantId || '(未填写)',
-      trans_id: transactionData.transId || transactionData.orderNo || '(未填写)',
-      orderNo: transactionData.orderNo || transactionData.transId || '(未填写，将自动生成)',
+      trans_id: transactionData.transId || '(未填写)',
       amount: transactionData.amount || 0,
       currency: transactionData.currency || 'USD',
       payment_type: transactionData.paymentType || 'PURCHASE',
@@ -1912,9 +1903,6 @@ const updateFormFromJson = () => {
     // 更新基本字段
     if (params.trans_id && params.trans_id !== '(未填写)') {
       transactionData.transId = params.trans_id
-    }
-    if (params.orderNo && params.orderNo !== '(未填写，将自动生成)') {
-      transactionData.orderNo = params.orderNo
     }
     if (params.amount !== undefined && params.amount !== '(未填写)') {
       transactionData.amount = params.amount
@@ -2151,7 +2139,6 @@ const copyResultText = async (text) => {
 // 重置表单
 const resetForm = () => {
   transactionData.transId = ''
-  transactionData.orderNo = ''
   transactionData.amount = 0
   transactionData.currency = 'USD'
   transactionData.paymentType = 'PURCHASE'
@@ -2317,12 +2304,8 @@ const submitTransaction = async () => {
   // 验证商户配置
   if (!validateMerchantConfig()) return
 
-  if (!transactionData.transId && !transactionData.orderNo) {
+  if (!transactionData.transId) {
     generateTransId()
-  } else if (!transactionData.transId) {
-    transactionData.transId = transactionData.orderNo
-  } else if (!transactionData.orderNo) {
-    transactionData.orderNo = transactionData.transId
   }
 
   if (!transactionData.amount || transactionData.amount <= 0) {
@@ -2341,11 +2324,11 @@ const submitTransaction = async () => {
   try {
     // 构建请求数据（使用下划线命名，与 PayKKaCheckoutBase 保持一致）
     const requestData = {
-      transId: transactionData.transId || transactionData.orderNo,
+      transId: transactionData.transId,
       amount: transactionData.amount,
       currency: transactionData.currency,
       paymentType: transactionData.paymentType || 'PURCHASE',
-      description: transactionData.description || `订单 ${transactionData.transId || transactionData.orderNo}`,
+      description: transactionData.description || `订单 ${transactionData.transId}`,
       captureMethod: transactionData.captureMethod || 'AUTOMATIC',
       expireTime: transactionData.expireTime ? formatExpireTime(transactionData.expireTime) : '',
       addressCollection: transactionData.addressCollection || 'AUTO',
@@ -3437,8 +3420,8 @@ code {
 
 .json-edit {
   width: 100%;
-  min-height: 200px;
-  max-height: 400px;
+  min-height: 400px;
+  max-height: 800px;
   padding: 1rem;
   margin: 0;
   border: none;
