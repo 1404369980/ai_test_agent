@@ -6,6 +6,8 @@ import PayKKaDropInTest from '../components/PayKKaDropInTest.vue'
 import PayKKaDropInPayment from '../components/PayKKaDropInPayment.vue'
 import PayKKaComponentTest from '../components/PayKKaComponentTest.vue'
 import UserConfig from '../components/UserConfig.vue'
+import MockDataManager from '../components/MockDataManager.vue'
+import TestCardManager from '../components/TestCardManager.vue'
 import PaymentResult from '../components/PaymentResult.vue'
 
 const routes = [
@@ -43,6 +45,16 @@ const routes = [
     path: '/user-config',
     name: 'user-config',
     component: UserConfig
+  },
+  {
+    path: '/mock-data',
+    name: 'mock-data',
+    component: MockDataManager
+  },
+  {
+    path: '/test-cards',
+    name: 'test-cards',
+    component: TestCardManager
   },
   {
     path: '/payment/success',

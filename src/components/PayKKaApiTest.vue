@@ -157,7 +157,7 @@
 
           <!-- 循环支付参数（仅当支付类型为 RECURRING 时显示） -->
           <div v-if="transactionData.paymentType === 'RECURRING'" class="form-row-2">
-            <div class="form-group">
+          <div class="form-group">
               <label>循环支付协议ID (Recurring Agreement ID)</label>
               <input 
                 v-model="transactionData.recurringAgreementId" 
@@ -244,6 +244,18 @@
             </div>
           </div>
 
+          <div class="form-group">
+            <label>商品信息 (Goods) <span class="required">*</span></label>
+            <textarea 
+              v-model="transactionData.goods" 
+              placeholder='[{"name":"商品名称","quantity":1,"price":99.99,"link":"https://example.com/product"}]'
+              class="input-field textarea"
+              rows="5"
+            ></textarea>
+            <button @click="generateGoods" class="btn-small" style="margin-top: 0.3rem;">随机生成商品</button>
+            <small class="field-desc">请输入有效的JSON数组，每个商品必须包含 name, quantity, price, link 字段</small>
+          </div>
+
           <div class="divider"></div>
 
           <div class="section-header">
@@ -269,7 +281,7 @@
             </div>
           </div>
           <div v-show="!sectionCollapsed.paymentInfo" class="form-row-3" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
-            <div class="form-group">
+          <div class="form-group">
               <label>支付方式 (Payment Method)</label>
               <SmartSelect
                 v-model="transactionData.paymentMethod"
@@ -286,11 +298,11 @@
             </div>
             <div class="form-group">
               <label>购物者参考 (Shopper Reference)</label>
-              <input 
+            <input 
                 v-model="transactionData.shopperReference" 
-                type="text" 
+              type="text" 
                 placeholder="f4911bc8b17106a08f2f7a89a9fc4d11"
-                class="input-field"
+              class="input-field"
                 :disabled="!transactionData.enablePaymentInfo"
               />
             </div>
@@ -308,13 +320,23 @@
           <div v-show="!sectionCollapsed.paymentInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
             <div class="form-group">
               <label>卡号 (Card No)</label>
-              <input 
-                v-model="transactionData.cardNo" 
-                type="text" 
-                placeholder="4242424242424242"
-                class="input-field"
-                :disabled="!transactionData.enablePaymentInfo"
-              />
+              <div class="input-with-button">
+                <input 
+                  v-model="transactionData.cardNo" 
+                  type="text" 
+                  placeholder="4242424242424242"
+                  class="input-field"
+                  :disabled="!transactionData.enablePaymentInfo"
+                />
+                <button 
+                  @click="showTestCardModal = true"
+                  class="btn-small btn-select-card"
+                  :disabled="!transactionData.enablePaymentInfo"
+                  type="button"
+                >
+                  选择测试卡号
+                </button>
+              </div>
             </div>
             <div class="form-group">
               <label>持卡人姓名 (Holder Name)</label>
@@ -516,14 +538,14 @@
           <div v-show="!sectionCollapsed.browserInfo" class="form-row-1" :class="{ 'disabled-section': !transactionData.enableBrowserInfo }">
             <div class="form-group">
               <label>Cookies</label>
-              <textarea 
+            <textarea 
                 v-model="transactionData.cookies" 
                 type="text" 
                 placeholder="isg=BA4O1YD75-wYqlLAB-T9JZjXxxxJFHEUkjdslrlhj9 TB_TENANT_TYPE=organization"
-                class="input-field textarea"
+              class="input-field textarea"
                 rows="2"
                 :disabled="!transactionData.enableBrowserInfo"
-              ></textarea>
+            ></textarea>
             </div>
           </div>
 
@@ -552,13 +574,13 @@
             </div>
           </div>
           <div v-show="!sectionCollapsed.customerInfo" class="form-row-4" :class="{ 'disabled-section': !transactionData.enableCustomerInfo }">
-            <div class="form-group">
+          <div class="form-group">
               <label>客户姓名 (Name) <span class="required">*</span></label>
-              <input 
+            <input 
                 v-model="transactionData.customerName" 
-                type="text" 
+              type="text" 
                 placeholder="Charlie Brown"
-                class="input-field"
+              class="input-field"
                 :disabled="!transactionData.enableCustomerInfo"
               />
             </div>
@@ -626,13 +648,22 @@
               <h3>账单信息 (Billing Info)</h3>
             </div>
             <div class="section-header-actions">
-              <button 
-                @click="generateAllBillInfo" 
-                class="btn-small btn-random-section"
-                :disabled="!transactionData.enableBillInfo"
-              >
-                随机生成
-              </button>
+              <div class="select-mock-actions">
+                <SmartSelect
+                  v-model="selectedBillMock"
+                  :options="billMockOptions"
+                  placeholder="选择预设数据"
+                  style="width: 180px;"
+                  :disabled="!transactionData.enableBillInfo || !mockDataLoaded"
+                />
+                <button 
+                  @click="generateAllBillInfo" 
+                  class="btn-small btn-random-section"
+                  :disabled="!transactionData.enableBillInfo || !mockDataLoaded"
+                >
+                  随机生成
+                </button>
+              </div>
               <label class="toggle-switch">
                 <input type="checkbox" v-model="transactionData.enableBillInfo" />
                 <span class="toggle-slider"></span>
@@ -787,13 +818,22 @@
               <h3>收货信息 (Shipping Info)</h3>
             </div>
             <div class="section-header-actions">
-              <button 
-                @click="generateAllShipInfo" 
-                class="btn-small btn-random-section"
-                :disabled="!transactionData.enableShipInfo"
-              >
-                随机生成
-              </button>
+              <div class="select-mock-actions">
+                <SmartSelect
+                  v-model="selectedShipMock"
+                  :options="shipMockOptions"
+                  placeholder="选择预设数据"
+                  style="width: 180px;"
+                  :disabled="!transactionData.enableShipInfo || !mockDataLoaded"
+                />
+                <button 
+                  @click="generateAllShipInfo" 
+                  class="btn-small btn-random-section"
+                  :disabled="!transactionData.enableShipInfo || !mockDataLoaded"
+                >
+                  随机生成
+                </button>
+              </div>
               <label class="toggle-switch">
                 <input type="checkbox" v-model="transactionData.enableShipInfo" />
                 <span class="toggle-slider"></span>
@@ -1026,7 +1066,7 @@
                     </svg>
                     {{ resultCollapsed.responseData ? '展开' : '折叠' }}
                   </button>
-                </div>
+              </div>
                 <div v-show="!resultCollapsed.responseData" class="json-display-container">
                   <textarea 
                     :value="formatJson(result.responseData)" 
@@ -1035,6 +1075,14 @@
                     spellcheck="false"
                   ></textarea>
                   <div class="json-actions">
+                    <button @click="extractRecurringAgreementId" class="btn-extract" title="提取循环协议ID">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                      </svg>
+                      提取循环协议ID
+                    </button>
                     <button @click="copyResultText(formatJson(result.responseData))" class="btn-copy" title="复制JSON">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -1042,7 +1090,7 @@
                       </svg>
                       复制
                     </button>
-                  </div>
+              </div>
                 </div>
               </div>
 
@@ -1056,7 +1104,7 @@
                     </svg>
                     {{ resultCollapsed.error ? '展开' : '折叠' }}
                   </button>
-                </div>
+              </div>
                 <div v-show="!resultCollapsed.error" class="json-display-container">
                   <textarea 
                     :value="result.error" 
@@ -1072,17 +1120,107 @@
                       </svg>
                       复制
                     </button>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
         </div>
       </div>
     </div>
     
     <!-- Toast 提示 -->
     <Toast />
+    
+    <!-- 测试卡号选择模态框 -->
+    <div v-if="showTestCardModal" class="modal-overlay" @click="showTestCardModal = false">
+      <div class="modal-content card-modal" @click.stop>
+        <div class="modal-header">
+          <h3>选择测试卡号</h3>
+          <button @click="showTestCardModal = false" class="modal-close" type="button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- 筛选工具栏 -->
+          <div class="card-filter-toolbar">
+            <div class="filter-group">
+              <label>支付渠道：</label>
+              <div class="filter-buttons">
+                <button 
+                  v-for="provider in cardProviders" 
+                  :key="provider.value"
+                  @click="selectedCardProvider = provider.value"
+                  :class="['filter-btn', { active: selectedCardProvider === provider.value }]"
+                  type="button"
+                >
+                  {{ provider.label }}
+                </button>
+              </div>
+            </div>
+            <div class="filter-group">
+              <label>类别：</label>
+              <div class="filter-buttons">
+                <button 
+                  v-for="category in cardCategories" 
+                  :key="category.value"
+                  @click="selectedCardCategory = category.value"
+                  :class="['filter-btn', { active: selectedCardCategory === category.value }]"
+                  type="button"
+                >
+                  {{ category.label }}
+                </button>
+              </div>
+            </div>
+            <div class="filter-group search-group">
+              <label>搜索：</label>
+              <input 
+                v-model="cardSearchText"
+                type="text"
+                placeholder="输入卡号、类型或描述搜索"
+                class="card-search-input"
+              />
+            </div>
+          </div>
+          
+          <!-- 测试卡号列表 -->
+          <div class="test-card-list">
+            <div 
+              v-for="(group, index) in filteredGroupedTestCards" 
+              :key="index"
+              class="card-group"
+            >
+              <div class="card-group-header">
+                <span class="provider-label">{{ group.providerLabel }}</span>
+                <span class="category-label">{{ group.categoryLabel }}</span>
+                <span class="card-count">({{ group.cards.length }})</span>
+              </div>
+              <div class="card-items">
+                <div 
+                  v-for="card in group.cards" 
+                  :key="card.id || card.cardNo"
+                  class="card-item"
+                  @click="selectTestCard(card.cardNo)"
+                >
+                  <div class="card-number">{{ card.cardNo }}</div>
+                  <div class="card-info">
+                    <span v-if="card.cardType" class="card-type">{{ card.cardType.toUpperCase() }}</span>
+                    <span v-if="card.description" class="card-description">{{ card.description }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-if="filteredGroupedTestCards.length === 0" class="empty-state">
+              <p>暂无匹配的测试卡号</p>
+              <p class="empty-state-desc">请调整筛选条件或搜索关键词</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1094,6 +1232,7 @@ import { payKKaApi } from '../services/paykkaApi'
 import { showError, showSuccess, showInfo } from '../utils/toast'
 import { useNavigation } from '../composables/useNavigation'
 import { useMerchantConfig } from '../composables/useMerchantConfig'
+import { getAllTestCards } from '../services/testCardManager'
 import { 
   generateRandomIP,
   generateRandomFirstName,
@@ -1245,10 +1384,17 @@ const transactionData = reactive({
 
 const result = ref(null)
 
-// JSON展示相关
-const isJsonCollapsed = ref(false)
-const editableJson = ref('')
-const isManuallyEditingJson = ref(false) // 标记用户是否正在手动编辑JSON
+// Mock数据相关
+const mockData = ref(null)
+const mockDataLoaded = ref(false)
+const selectedBillMock = ref('')
+const selectedShipMock = ref('')
+const isFirstTimeGenerate = ref(true) // 标记是否是第一次生成
+const lastSubmittedTransId = ref('') // 记录上次提交的交易ID
+const showTestCardModal = ref(false) // 是否显示测试卡号选择模态框
+const selectedCardProvider = ref('all') // 选中的支付渠道（all表示全部）
+const selectedCardCategory = ref('all') // 选中的类别（all表示全部）
+const cardSearchText = ref('') // 卡号搜索文本
 
 // 各个信息部分的折叠状态（默认折叠，减少页面显示）
 const sectionCollapsed = reactive({
@@ -1258,6 +1404,11 @@ const sectionCollapsed = reactive({
   billInfo: true,
   shipInfo: true
 })
+
+// JSON展示相关
+const isJsonCollapsed = ref(false)
+const editableJson = ref('')
+const isManuallyEditingJson = ref(false) // 标记用户是否正在手动编辑JSON
 
 // 测试结果部分的折叠状态
 const resultCollapsed = reactive({
@@ -1364,10 +1515,12 @@ const generateCustomer = () => {
   const orderIp = generateRandomIP()
   const payIp = generateRandomIP()
   
+  // 生成唯一的客户ID（时间戳 + 随机数）
+  const randomSuffix = Math.floor(Math.random() * 1000000)
   transactionData.customerName = fullName
   transactionData.customerEmail = email
   transactionData.customerPhone = phone
-  transactionData.customerId = `CUST${Date.now()}`
+  transactionData.customerId = `CUST${Date.now()}${randomSuffix}`
   transactionData.customerOrderIp = orderIp
   transactionData.customerPayIp = payIp
   
@@ -1428,40 +1581,388 @@ const generateRandomDescription = () => {
   transactionData.description = descriptions[Math.floor(Math.random() * descriptions.length)]
 }
 
+// Mock数据选项
+const billMockOptions = computed(() => {
+  if (!mockData.value || !mockData.value.personalInfo) {
+    return []
+  }
+  return mockData.value.personalInfo.map((item, index) => {
+    const fullName = `${item.firstName} ${item.lastName}`
+    const displayLabel = `${fullName} - ${item.city}, ${item.country}`
+    // 添加搜索关键词：姓名、国家、城市
+    const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
+    return {
+      value: String(index),
+      label: displayLabel,
+      searchText: searchText, // 用于搜索的关键词
+      displayName: fullName // 选中后显示的名称
+    }
+  })
+})
+
+const shipMockOptions = computed(() => {
+  if (!mockData.value || !mockData.value.personalInfo) {
+    return []
+  }
+  return mockData.value.personalInfo.map((item, index) => {
+    const fullName = `${item.firstName} ${item.lastName}`
+    const displayLabel = `${fullName} - ${item.city}, ${item.country}`
+    // 添加搜索关键词：姓名、国家、城市
+    const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
+    return {
+      value: String(index),
+      label: displayLabel,
+      searchText: searchText, // 用于搜索的关键词
+      displayName: fullName // 选中后显示的名称
+    }
+  })
+})
+
+// 测试卡号选项
+const testCardOptions = computed(() => {
+  try {
+    const allCards = getAllTestCards()
+    if (!allCards || allCards.length === 0) {
+      return []
+    }
+    
+    // 按渠道分组，然后按类别分组
+    const groupedCards = {}
+    allCards.forEach(card => {
+      const provider = card.provider || 'other'
+      const category = card.category || 'common'
+      const key = `${provider}_${category}`
+      
+      if (!groupedCards[key]) {
+        groupedCards[key] = {
+          provider,
+          category,
+          cards: []
+        }
+      }
+      groupedCards[key].cards.push(card)
+    })
+    
+    // 构建选项列表
+    const options = []
+    const providerLabels = {
+      'stripe': 'Stripe',
+      'ecp': 'ECP',
+      'cko': 'CKO',
+      'other': '其他'
+    }
+    const categoryLabels = {
+      'common': '常用卡',
+      'special': '特殊卡'
+    }
+    
+    // 按渠道和类别排序
+    const sortedKeys = Object.keys(groupedCards).sort()
+    sortedKeys.forEach(key => {
+      const group = groupedCards[key]
+      const providerLabel = providerLabels[group.provider] || group.provider
+      const categoryLabel = categoryLabels[group.category] || group.category
+      
+      // 添加分组标题（使用特殊值作为分隔符）
+      options.push({
+        value: `__group_${key}__`,
+        label: `${providerLabel} - ${categoryLabel}`,
+        disabled: true,
+        isGroup: true
+      })
+      
+      // 添加该组下的所有卡号
+      group.cards.forEach(card => {
+        // 优化显示格式：卡号 + 卡类型 + 描述
+        let displayLabel = card.cardNo
+        const parts = []
+        
+        if (card.cardType) {
+          parts.push(card.cardType.toUpperCase())
+        }
+        if (card.description) {
+          parts.push(card.description)
+        }
+        
+        if (parts.length > 0) {
+          displayLabel = `${card.cardNo} [${parts.join(' | ')}]`
+        }
+        
+        // 搜索关键词：卡号、卡类型、描述、渠道、类别
+        const searchText = `${card.cardNo} ${card.cardType || ''} ${card.description || ''} ${providerLabel} ${categoryLabel}`.toLowerCase()
+        
+        options.push({
+          value: card.cardNo,
+          label: displayLabel,
+          searchText: searchText,
+          displayName: card.cardNo // 选中后只显示卡号
+        })
+      })
+    })
+    
+    return options
+  } catch (error) {
+    console.error('获取测试卡号选项失败:', error)
+    return []
+  }
+})
+
+// 支付渠道选项
+const cardProviders = [
+  { value: 'all', label: '全部' },
+  { value: 'stripe', label: 'Stripe' },
+  { value: 'ecp', label: 'ECP' },
+  { value: 'cko', label: 'CKO' }
+]
+
+// 类别选项
+const cardCategories = [
+  { value: 'all', label: '全部' },
+  { value: 'common', label: '常用卡' },
+  { value: 'special', label: '特殊卡' }
+]
+
+// 分组后的测试卡号（用于模态框显示）
+const groupedTestCards = computed(() => {
+  try {
+    const allCards = getAllTestCards()
+    if (!allCards || allCards.length === 0) {
+      return []
+    }
+    
+    // 按渠道分组，然后按类别分组
+    const grouped = {}
+    allCards.forEach(card => {
+      const provider = card.provider || 'other'
+      const category = card.category || 'common'
+      const key = `${provider}_${category}`
+      
+      if (!grouped[key]) {
+        grouped[key] = {
+          provider,
+          category,
+          providerLabel: getProviderLabel(provider),
+          categoryLabel: getCategoryLabel(category),
+          cards: []
+        }
+      }
+      grouped[key].cards.push(card)
+    })
+    
+    // 转换为数组并排序，Stripe 常用卡优先
+    return Object.values(grouped).sort((a, b) => {
+      // Stripe 常用卡排在最前面
+      const aIsStripeCommon = a.provider === 'stripe' && a.category === 'common'
+      const bIsStripeCommon = b.provider === 'stripe' && b.category === 'common'
+      
+      if (aIsStripeCommon && !bIsStripeCommon) {
+        return -1
+      }
+      if (!aIsStripeCommon && bIsStripeCommon) {
+        return 1
+      }
+      
+      // 其他按原来的逻辑排序
+      if (a.provider !== b.provider) {
+        return a.provider.localeCompare(b.provider)
+      }
+      return a.category.localeCompare(b.category)
+    })
+  } catch (error) {
+    console.error('获取分组测试卡号失败:', error)
+    return []
+  }
+})
+
+// 过滤后的分组测试卡号
+const filteredGroupedTestCards = computed(() => {
+  let filtered = groupedTestCards.value
+  
+  // 按渠道筛选
+  if (selectedCardProvider.value !== 'all') {
+    filtered = filtered.filter(group => group.provider === selectedCardProvider.value)
+  }
+  
+  // 按类别筛选
+  if (selectedCardCategory.value !== 'all') {
+    filtered = filtered.filter(group => group.category === selectedCardCategory.value)
+  }
+  
+  // 按搜索文本筛选
+  if (cardSearchText.value && cardSearchText.value.trim()) {
+    const searchLower = cardSearchText.value.toLowerCase().trim()
+    filtered = filtered.map(group => {
+      const filteredCards = group.cards.filter(card => {
+        const cardNo = (card.cardNo || '').toLowerCase()
+        const cardType = (card.cardType || '').toLowerCase()
+        const description = (card.description || '').toLowerCase()
+        return cardNo.includes(searchLower) || 
+               cardType.includes(searchLower) || 
+               description.includes(searchLower)
+      })
+      return {
+        ...group,
+        cards: filteredCards
+      }
+    }).filter(group => group.cards.length > 0)
+  }
+  
+  return filtered
+})
+
+// 获取渠道标签
+const getProviderLabel = (provider) => {
+  const labels = {
+    'stripe': 'Stripe',
+    'ecp': 'ECP',
+    'cko': 'CKO',
+    'other': '其他'
+  }
+  return labels[provider] || provider
+}
+
+// 获取类别标签
+const getCategoryLabel = (category) => {
+  const labels = {
+    'common': '常用卡',
+    'special': '特殊卡'
+  }
+  return labels[category] || category
+}
+
+// 选择测试卡号
+const selectTestCard = (cardNo) => {
+  transactionData.cardNo = cardNo
+  showTestCardModal.value = false
+  // 重置筛选条件
+  selectedCardProvider.value = 'all'
+  selectedCardCategory.value = 'all'
+  cardSearchText.value = ''
+  showSuccess('已选择测试卡号')
+}
+
+// 从Mock数据应用账单信息
+const applyBillFromMock = (index) => {
+  if (!mockData.value || !mockData.value.personalInfo || !mockData.value.personalInfo[index]) {
+    return
+  }
+  
+  const item = mockData.value.personalInfo[index]
+  
+  transactionData.billFirstName = item.firstName
+  transactionData.billLastName = item.lastName
+  transactionData.billEmail = item.email
+  transactionData.billPhone = item.phone
+  transactionData.billAddressLine1 = item.addressLine1
+  transactionData.billCountry = item.country
+  transactionData.billState = item.state
+  transactionData.billCity = item.city
+  transactionData.billPostalCode = item.postalCode
+  transactionData.billAreaCode = item.areaCode
+  transactionData.billDescriptor = `DESC${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+  const options = ['REQUIRED', 'AUTO']
+  transactionData.billAddressCollection = options[Math.floor(Math.random() * options.length)]
+}
+
+// 从Mock数据应用收货信息
+const applyShipFromMock = (index) => {
+  if (!mockData.value || !mockData.value.personalInfo || !mockData.value.personalInfo[index]) {
+    return
+  }
+  
+  const item = mockData.value.personalInfo[index]
+  
+  transactionData.shipFirstName = item.firstName
+  transactionData.shipLastName = item.lastName
+  transactionData.shipEmail = item.email
+  transactionData.shipPhone = item.phone
+  transactionData.shipAddressLine1 = item.addressLine1
+  transactionData.shipCountry = item.country
+  transactionData.shipState = item.state
+  transactionData.shipCity = item.city
+  transactionData.shipPostalCode = item.postalCode
+  transactionData.shipAreaCode = item.areaCode
+}
+
+// 监听账单信息Mock数据选择，自动应用
+watch(selectedBillMock, (newValue) => {
+  if (newValue && newValue !== '') {
+    applyBillFromMock(parseInt(newValue))
+    showSuccess('已应用预设账单信息')
+  }
+})
+
+// 监听收货信息Mock数据选择，自动应用
+watch(selectedShipMock, (newValue) => {
+  if (newValue && newValue !== '') {
+    applyShipFromMock(parseInt(newValue))
+    showSuccess('已应用预设收货信息')
+  }
+})
+
+
 // 批量生成所有客户信息
 const generateAllCustomerInfo = () => {
   generateCustomer()
 }
 
 // 批量生成所有账单信息
-const generateAllBillInfo = () => {
-  transactionData.billFirstName = generateRandomFirstName()
-  transactionData.billLastName = generateRandomLastName()
-  transactionData.billEmail = generateRandomEmailUtil('bill')
-  transactionData.billPhone = generateRandomPhoneUtil('us')
-  transactionData.billAddressLine1 = generateRandomAddressUtil('en')
-  transactionData.billCountry = generateRandomCountryUtil()
-  transactionData.billState = generateRandomStateUtil(transactionData.billCountry || 'US')
-  transactionData.billCity = generateRandomCityUtil(transactionData.billCountry || 'US')
-  transactionData.billPostalCode = generateRandomPostalCodeUtil()
-  transactionData.billAreaCode = generateRandomAreaCodeUtil(transactionData.billCountry || 'CN')
-  transactionData.billDescriptor = `DESC${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-  const options = ['REQUIRED', 'AUTO']
-  transactionData.billAddressCollection = options[Math.floor(Math.random() * options.length)]
+const generateAllBillInfo = (forceRandom = false) => {
+  if (!forceRandom && selectedBillMock.value) {
+    // 如果选择了预设数据，应用该数据
+    applyBillFromMock(parseInt(selectedBillMock.value))
+    showSuccess('已应用预设账单信息')
+  } else {
+    // 否则从Mock数据中随机选择
+    if (!forceRandom && mockData.value && mockData.value.personalInfo && mockData.value.personalInfo.length > 0) {
+      const randomIndex = Math.floor(Math.random() * mockData.value.personalInfo.length)
+      applyBillFromMock(randomIndex)
+      showSuccess('已随机生成账单信息')
+    } else {
+      // 如果没有Mock数据或强制随机生成，使用原来的随机生成方法
+      transactionData.billFirstName = generateRandomFirstName()
+      transactionData.billLastName = generateRandomLastName()
+      transactionData.billEmail = generateRandomEmailUtil('bill')
+      transactionData.billPhone = generateRandomPhoneUtil('us')
+      transactionData.billAddressLine1 = generateRandomAddressUtil('en')
+      transactionData.billCountry = generateRandomCountryUtil()
+      transactionData.billState = generateRandomStateUtil(transactionData.billCountry || 'US')
+      transactionData.billCity = generateRandomCityUtil(transactionData.billCountry || 'US')
+      transactionData.billPostalCode = generateRandomPostalCodeUtil()
+      transactionData.billAreaCode = generateRandomAreaCodeUtil(transactionData.billCountry || 'CN')
+      transactionData.billDescriptor = `DESC${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+      const options = ['REQUIRED', 'AUTO']
+      transactionData.billAddressCollection = options[Math.floor(Math.random() * options.length)]
+    }
+  }
 }
 
 // 批量生成所有收货信息
-const generateAllShipInfo = () => {
-  transactionData.shipFirstName = generateRandomFirstName()
-  transactionData.shipLastName = generateRandomLastName()
-  transactionData.shipEmail = generateRandomEmailUtil('ship')
-  transactionData.shipPhone = generateRandomPhoneUtil('fr')
-  transactionData.shipAddressLine1 = generateRandomAddressUtil('en')
-  transactionData.shipCountry = generateRandomCountryUtil()
-  transactionData.shipState = generateRandomStateUtil(transactionData.shipCountry || 'FR')
-  transactionData.shipCity = generateRandomCityUtil(transactionData.shipCountry || 'FR')
-  transactionData.shipPostalCode = generateRandomPostalCodeUtil()
-  transactionData.shipAreaCode = generateRandomAreaCodeUtil(transactionData.shipCountry || 'FR')
+const generateAllShipInfo = (forceRandom = false) => {
+  if (!forceRandom && selectedShipMock.value) {
+    // 如果选择了预设数据，应用该数据
+    applyShipFromMock(parseInt(selectedShipMock.value))
+    showSuccess('已应用预设收货信息')
+  } else {
+    // 否则从Mock数据中随机选择
+    if (!forceRandom && mockData.value && mockData.value.personalInfo && mockData.value.personalInfo.length > 0) {
+      const randomIndex = Math.floor(Math.random() * mockData.value.personalInfo.length)
+      applyShipFromMock(randomIndex)
+      showSuccess('已随机生成收货信息')
+    } else {
+      // 如果没有Mock数据或强制随机生成，使用原来的随机生成方法
+      transactionData.shipFirstName = generateRandomFirstName()
+      transactionData.shipLastName = generateRandomLastName()
+      transactionData.shipEmail = generateRandomEmailUtil('ship')
+      transactionData.shipPhone = generateRandomPhoneUtil('fr')
+      transactionData.shipAddressLine1 = generateRandomAddressUtil('en')
+      transactionData.shipCountry = generateRandomCountryUtil()
+      transactionData.shipState = generateRandomStateUtil(transactionData.shipCountry || 'FR')
+      transactionData.shipCity = generateRandomCityUtil(transactionData.shipCountry || 'FR')
+      transactionData.shipPostalCode = generateRandomPostalCodeUtil()
+      transactionData.shipAreaCode = generateRandomAreaCodeUtil(transactionData.shipCountry || 'FR')
+    }
+  }
 }
 
 // 随机生成支付信息
@@ -1578,26 +2079,42 @@ const generateBrowserInfo = () => {
 
 // 一键随机生成所有参数
 const generateAllRandom = () => {
+  // 清除预设数据选择，强制随机生成
+  selectedBillMock.value = ''
+  selectedShipMock.value = ''
+  
   generateRandomAmount()
   generateRandomCurrency()
-  generateAllCustomerInfo()
   generateTransId()
-  // 如果账单信息开关启用，则生成账单信息（与浏览器信息逻辑保持一致）
-  if (transactionData.enableBillInfo) {
-    generateAllBillInfo()
+  generateGoods()
+  
+  // 只在第一次生成时生成这些信息
+  const isFirstTime = isFirstTimeGenerate.value
+  if (isFirstTime) {
+    generateAllCustomerInfo()
+    // 如果账单信息开关启用，则生成账单信息（与浏览器信息逻辑保持一致）
+    if (transactionData.enableBillInfo) {
+      generateAllBillInfo(true) // 强制随机生成
+    }
+    // 如果收货信息开关启用，则生成收货信息
+    if (transactionData.enableShipInfo) {
+      generateAllShipInfo(true) // 强制随机生成
+    }
+    // 如果支付信息开关启用，则生成支付信息
+    if (transactionData.enablePaymentInfo) {
+      generatePaymentInfo()
+    }
+    // 如果浏览器信息开关启用，则生成浏览器信息
+    if (transactionData.enableBrowserInfo) {
+      generateBrowserInfo()
+    }
+    // 标记已生成过，后续不再生成
+    isFirstTimeGenerate.value = false
+    showSuccess('已随机生成所有参数')
+  } else {
+    showSuccess('已更新交易参数（保留个人信息）')
   }
-  // 如果收货信息开关启用，则生成收货信息
-  if (transactionData.enableShipInfo) {
-    generateAllShipInfo()
-  }
-  // 如果支付信息开关启用，则生成支付信息
-  if (transactionData.enablePaymentInfo) {
-    generatePaymentInfo()
-  }
-  // 如果浏览器信息开关启用，则生成浏览器信息
-  if (transactionData.enableBrowserInfo) {
-    generateBrowserInfo()
-  }
+  
   // 保持过期时间为默认值（当前时间之后半小时），不随机生成
   transactionData.expireTime = getDefaultExpireTime()
   // 注意：addressCollection 不参与随机生成，保持用户设置的值或默认值 'AUTO'
@@ -2065,6 +2582,42 @@ const copyJson = async () => {
   }
 }
 
+// 提取循环协议ID
+const extractRecurringAgreementId = () => {
+  if (!result.value || !result.value.responseData) {
+    showError('暂无响应数据')
+    return
+  }
+
+  try {
+    const responseData = result.value.responseData
+    // 尝试从 data.recurring_agreement_id 提取
+    let recurringAgreementId = null
+    
+    if (responseData.data && responseData.data.recurring_agreement_id) {
+      recurringAgreementId = responseData.data.recurring_agreement_id
+    } else if (responseData.recurring_agreement_id) {
+      recurringAgreementId = responseData.recurring_agreement_id
+    }
+
+    if (recurringAgreementId) {
+      transactionData.recurringAgreementId = String(recurringAgreementId)
+      // 自动设置商户主动发起 (MIT) 为 true
+      transactionData.mit = true
+      // 如果支付类型不是 RECURRING，提示用户
+      if (transactionData.paymentType !== 'RECURRING') {
+        showInfo('已提取循环协议ID并设置MIT为true，请将支付类型设置为 RECURRING 以使用该参数')
+      } else {
+        showSuccess(`已提取循环协议ID: ${recurringAgreementId}，并设置商户主动发起(MIT)为true`)
+      }
+    } else {
+      showError('请使用循环支付，并确保交易成功')
+    }
+  } catch (error) {
+    showError('请使用循环支付，并确保交易成功')
+  }
+}
+
 // 复制测试结果文本到剪贴板
 const copyResultText = async (text) => {
   if (!text) {
@@ -2096,6 +2649,11 @@ const copyResultText = async (text) => {
 
 // 重置表单
 const resetForm = () => {
+  // 重置首次生成标记，允许重新生成所有信息
+  isFirstTimeGenerate.value = true
+  // 重置上次提交的交易ID
+  lastSubmittedTransId.value = ''
+  
   transactionData.transId = ''
   transactionData.amount = 0
   transactionData.currency = 'USD'
@@ -2221,23 +2779,18 @@ const validateJsonData = () => {
     }
   }
 
-  // 商品信息从 JSON 中解析，如果没有则返回 null（允许为空）
   try {
-    if (transactionData.goods) {
-      goodsObj = JSON.parse(transactionData.goods)
-      // 验证 goods[0].link 不能为null
-      if (!Array.isArray(goodsObj) || goodsObj.length === 0) {
-        showError('商品信息 (Goods) 必须是一个非空数组')
+    goodsObj = JSON.parse(transactionData.goods)
+    // 验证 goods[0].link 不能为null
+    if (!Array.isArray(goodsObj) || goodsObj.length === 0) {
+      showError('商品信息 (Goods) 必须是一个非空数组')
+      return null
+    }
+    for (let i = 0; i < goodsObj.length; i++) {
+      if (goodsObj[i].link === null || goodsObj[i].link === undefined) {
+        showError(`商品信息 (Goods) 中第 ${i + 1} 个商品的 link 字段不能为null`)
         return null
       }
-      for (let i = 0; i < goodsObj.length; i++) {
-        if (goodsObj[i].link === null || goodsObj[i].link === undefined) {
-          showError(`商品信息 (Goods) 中第 ${i + 1} 个商品的 link 字段不能为null`)
-          return null
-        }
-      }
-    } else {
-      goodsObj = null
     }
   } catch (e) {
     showError('商品信息 (Goods) 格式错误，请输入有效的JSON')
@@ -2266,8 +2819,13 @@ const submitTransaction = async () => {
   // 验证商户配置
   if (!validateMerchantConfig()) return
 
+  // 如果交易ID为空，生成新的
   if (!transactionData.transId) {
     generateTransId()
+  } else if (transactionData.transId === lastSubmittedTransId.value) {
+    // 如果交易ID与上次提交的相同，自动生成新的
+    generateTransId()
+    showInfo('交易ID已更新，避免重复提交')
   }
 
   if (!transactionData.amount || transactionData.amount <= 0) {
@@ -2433,6 +2991,9 @@ const submitTransaction = async () => {
       apiConfig.appId // App ID 用于请求头
     )
 
+    // 记录本次提交的交易ID
+    lastSubmittedTransId.value = transactionData.transId
+
     result.value = {
       status: 'success',
       timestamp: new Date().toLocaleString('zh-CN'),
@@ -2441,6 +3002,9 @@ const submitTransaction = async () => {
       responseData: response.data || response // 只保存API返回的响应数据
     }
   } catch (error) {
+    // 即使失败也记录交易ID，避免重复提交
+    lastSubmittedTransId.value = transactionData.transId
+    
     result.value = {
       status: 'error',
       timestamp: new Date().toLocaleString('zh-CN'),
@@ -2455,8 +3019,27 @@ const submitTransaction = async () => {
 }
 
 // 组件挂载时加载商户配置（与 PayKKaCheckoutBase 保持一致）
+// 加载Mock数据
+const loadMockData = async () => {
+  try {
+    const response = await fetch('/mock-data/mock_data.json')
+    if (!response.ok) {
+      throw new Error('加载Mock数据失败')
+    }
+    const data = await response.json()
+    mockData.value = data
+    mockDataLoaded.value = true
+    console.log('Mock数据加载成功:', data.personalInfo?.length || 0, '条个人信息')
+  } catch (error) {
+    console.error('加载Mock数据失败:', error)
+    mockDataLoaded.value = false
+    // 不显示错误提示，允许使用原来的随机生成方法
+  }
+}
+
 onMounted(() => {
   loadMerchantConfigs()
+  loadMockData()
 })
 </script>
 
@@ -2519,17 +3102,17 @@ onMounted(() => {
 .test-panel {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
-  gap: 1rem;
-  background: white;
-  border-radius: 10px;
-  padding: 1.2rem;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  gap: 1.2rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.15), 0 0 0 1px rgba(102, 126, 234, 0.1);
   min-height: calc(100vh - 60px);
   max-height: calc(100vh - 60px);
   overflow: hidden;
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(102, 126, 234, 0.1);
 }
 
 .form-section {
@@ -2560,14 +3143,15 @@ onMounted(() => {
 
 .form-section h2,
 .result-section h2 {
-  color: #333;
+  color: #1a1a1a;
   margin-bottom: 1rem;
   margin-top: 0;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   border-bottom: 3px solid #667eea;
-  padding-bottom: 0.4rem;
-  font-weight: 600;
+  padding-bottom: 0.5rem;
+  font-weight: 700;
   position: relative;
+  letter-spacing: 0.3px;
 }
 
 .form-section h2::after,
@@ -2583,13 +3167,17 @@ onMounted(() => {
 }
 
 .form-section h3 {
-  color: #555;
+  color: #2d3748;
   margin: 0.6rem 0 0.4rem 0;
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding-left: 0.5rem;
-  border-left: 3px solid #667eea;
-  line-height: 1.3;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding-left: 0.6rem;
+  border-left: 4px solid #667eea;
+  line-height: 1.4;
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.05) 0%, transparent 100%);
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  border-radius: 0 4px 4px 0;
 }
 
 .section-header {
@@ -2597,19 +3185,19 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin: 0.6rem 0 0.4rem 0;
-  padding: 0.4rem 0.6rem;
-  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 0.5rem 0.8rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 10px;
+  border: 2px solid #e8ebf0;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: all 0.3s ease;
 }
 
 .section-header:hover {
-  background: linear-gradient(135deg, #f0f2f5 0%, #e8ebef 100%);
-  border-color: #d0d0d0;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f4ff 100%);
+  border-color: #667eea;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
 }
 
 .section-header-title {
@@ -2652,6 +3240,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.select-mock-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .btn-random-section {
@@ -2760,48 +3354,41 @@ onMounted(() => {
 
 .form-group label {
   display: block;
-  margin-bottom: 0.1rem;
-  color: #333;
-  font-weight: 600;
-  font-size: 0.8rem;
-  line-height: 1.2;
+  margin-bottom: 0.15rem;
+  color: #2d3748;
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  letter-spacing: 0.2px;
 }
 
 .input-field {
   width: 100%;
-  padding: 0.3rem 0.5rem;
-  border: 2px solid #d0d0d0;
-  border-radius: 5px;
+  padding: 0.4rem 0.6rem;
+  border: 2px solid #e0e4e8;
+  border-radius: 6px;
   font-size: 0.85rem;
   transition: all 0.3s ease;
   box-sizing: border-box;
   background: #ffffff;
   color: #1a1a1a;
-  line-height: 1.3;
+  line-height: 1.4;
   font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .input-field:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15), 0 2px 8px rgba(102, 126, 234, 0.2);
   background: #ffffff;
   color: #000000;
+  transform: translateY(-1px);
 }
 
 .input-field:hover:not(:disabled) {
-  border-color: #999999;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
-}
-
-.input-field:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
-}
-
-.input-field:hover {
-  border-color: #ccc;
+  border-color: #b8c5d1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .input-field.readonly,
@@ -2886,6 +3473,16 @@ onMounted(() => {
   flex: 1;
 }
 
+.input-with-select {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.input-with-select .input-field {
+  flex: 1;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2926,10 +3523,11 @@ onMounted(() => {
 }
 
 .divider {
-  height: 1px;
-  background: linear-gradient(to right, transparent, #e0e0e0 20%, #e0e0e0 80%, transparent);
-  margin: 0.6rem 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(102, 126, 234, 0.2) 20%, rgba(102, 126, 234, 0.2) 80%, transparent);
+  margin: 0.8rem 0;
   position: relative;
+  border-radius: 1px;
 }
 
 .divider::after {
@@ -2948,11 +3546,17 @@ onMounted(() => {
 .button-group {
   display: flex;
   flex-direction: row;
-  gap: 0.6rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 2px solid #e0e0e0;
+  gap: 0.8rem;
+  margin-top: 1.2rem;
+  padding-top: 1.2rem;
+  border-top: 2px solid rgba(102, 126, 234, 0.15);
   flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, transparent 100%);
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+  border-radius: 8px;
 }
 
 .button-group button {
@@ -2965,16 +3569,17 @@ onMounted(() => {
 .btn-random,
 .btn-info,
 .btn-small {
-  padding: 0.25rem 0.4rem;
+  padding: 0.3rem 0.5rem;
   border: none;
-  border-radius: 3px;
+  border-radius: 5px;
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
-  font-weight: 500;
-  line-height: 1.2;
+  font-weight: 600;
+  line-height: 1.3;
   height: fit-content;
   box-sizing: border-box;
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
 }
 
 .btn-small {
@@ -2986,21 +3591,25 @@ onMounted(() => {
 
 .btn-small:hover {
   background: #5568d3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
 }
 
 .btn-primary {
-  background: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   flex: 1;
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
   min-width: 100px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #5568d3;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, #5568d3 0%, #6a3d8a 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 .btn-primary:disabled {
@@ -3010,32 +3619,36 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
   color: #333;
   flex: 1;
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
   min-width: 100px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn-secondary:hover {
-  background: #e0e0e0;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #e8e8e8 0%, #d8d8d8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .btn-random {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   color: white;
   flex: 1;
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
   min-width: 100px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
 }
 
 .btn-random:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(245, 87, 108, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(245, 87, 108, 0.5);
 }
 
 .btn-info {
@@ -3060,15 +3673,16 @@ onMounted(() => {
 }
 
 .result-section {
-  background: #f8f9fa;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 12px;
   padding: 1.5rem;
   max-height: calc(100vh - 150px);
   overflow-y: auto;
   overflow-x: hidden;
   position: sticky;
   top: 0;
-  border: 2px solid #e0e0e0;
+  border: 2px solid #e8ebf0;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .result-section::-webkit-scrollbar {
@@ -3377,10 +3991,11 @@ code {
 
 .json-display-container {
   position: relative;
-  background: #f8f9fa;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
+  background: #ffffff;
+  border: 2px solid #e8ebf0;
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .json-edit {
@@ -3425,7 +4040,8 @@ code {
 
 .btn-update,
 .btn-copy,
-.btn-reset {
+.btn-reset,
+.btn-extract {
   padding: 0.4rem 0.8rem;
   background: #667eea;
   color: white;
@@ -3443,6 +4059,16 @@ code {
   background: #5568d3;
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-extract {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.btn-extract:hover {
+  background: linear-gradient(135deg, #e084f0 0%, #e4475c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(245, 87, 108, 0.3);
 }
 
 .btn-copy {
@@ -3467,9 +4093,328 @@ code {
 
 .btn-update svg,
 .btn-copy svg,
-.btn-reset svg {
+.btn-reset svg,
+.btn-extract svg {
   width: 14px;
   height: 14px;
+}
+
+/* 模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+
+.card-modal {
+  max-width: 1000px;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 1.5rem;
+  border-bottom: 2px solid #e0e0e0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.modal-body {
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-filter-toolbar {
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+  border-bottom: 2px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.filter-group:last-child {
+  margin-bottom: 0;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.85rem;
+  min-width: 60px;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 0.4rem 0.8rem;
+  border: 2px solid #e0e0e0;
+  background: white;
+  color: #666;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.filter-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.filter-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+}
+
+.search-group {
+  flex: 1;
+}
+
+.search-group label {
+  min-width: 50px;
+}
+
+.card-search-input {
+  flex: 1;
+  padding: 0.4rem 0.8rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.card-search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.test-card-list {
+  padding: 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-group {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fafafa;
+}
+
+.card-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 0.8rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+}
+
+.card-count {
+  margin-left: auto;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.provider-label {
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+}
+
+.category-label {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  padding: 0.2rem 0.6rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.card-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.6rem;
+  padding: 0.8rem;
+  background: white;
+}
+
+.card-item {
+  padding: 0.8rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.card-item:hover {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.card-number {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.4rem;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  letter-spacing: 0.5px;
+  word-break: break-all;
+}
+
+.card-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.card-type {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.card-description {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  background: #f0f0f0;
+  color: #666;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #999;
+}
+
+.empty-state p {
+  margin: 0.5rem 0;
+}
+
+.empty-state-desc {
+  font-size: 0.85rem;
+  color: #bbb;
+}
+
+.btn-select-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.3rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.btn-select-card:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5568d3 0%, #653a91 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-select-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 1024px) {

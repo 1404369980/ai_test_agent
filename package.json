@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:mock": "node scripts/generateMockData.js"
   },
   "dependencies": {
     "@paykka/card-checkout-ui": "^0.13.7",

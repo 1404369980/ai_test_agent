@@ -26,22 +26,28 @@
         <path d="M6 9l6 6 6-6"/>
       </svg>
     </div>
-    <div v-if="isOpen && filteredOptions.length > 0" class="smart-select-dropdown">
-      <div
-        v-for="(option, index) in filteredOptions"
-        :key="index"
-        :class="['smart-select-option', { 'is-highlighted': index === highlightedIndex, 'is-matched': option.matched }]"
-        @mousedown.prevent="selectOption(option.value)"
-        @mouseenter="highlightedIndex = index"
+    <Teleport to="body">
+      <div 
+        v-if="isOpen && filteredOptions.length > 0" 
+        class="smart-select-dropdown"
+        :style="dropdownStyle"
       >
-        <span v-html="highlightMatch(option.label, inputValue)"></span>
+        <div
+          v-for="(option, index) in filteredOptions"
+          :key="index"
+          :class="['smart-select-option', { 'is-highlighted': index === highlightedIndex, 'is-matched': option.matched, 'is-disabled': option.disabled }]"
+          @mousedown.prevent="!option.disabled && selectOption(option.value)"
+          @mouseenter="!option.disabled && (highlightedIndex = index)"
+        >
+          <span v-html="highlightMatch(option.label, inputValue)"></span>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -72,6 +78,7 @@ const isOpen = ref(false)
 const inputValue = ref('')
 const highlightedIndex = ref(0)
 const showAllOnClick = ref(false) // 标记是否应该显示所有选项（点击时）
+const dropdownStyle = ref({})
 
 // 规范化选项
 const normalizedOptions = computed(() => {
@@ -96,8 +103,11 @@ const filteredOptions = computed(() => {
       normalizedOptions.value.forEach(opt => {
         const label = String(opt.label || opt.value).toLowerCase()
         const value = String(opt.value).toLowerCase()
+        const searchTextField = String(opt.searchText || '').toLowerCase()
+        const displayName = String(opt.displayName || '').toLowerCase()
         
-        if (label.includes(searchText) || value.includes(searchText)) {
+        // 支持在 label、value、searchText 和 displayName 中搜索
+        if (label.includes(searchText) || value.includes(searchText) || searchTextField.includes(searchText) || displayName.includes(searchText)) {
           matched.push({
             ...opt,
             matched: true
@@ -138,8 +148,11 @@ const filteredOptions = computed(() => {
   normalizedOptions.value.forEach(opt => {
     const label = String(opt.label || opt.value).toLowerCase()
     const value = String(opt.value).toLowerCase()
+    const searchTextField = String(opt.searchText || '').toLowerCase()
+    const displayName = String(opt.displayName || '').toLowerCase()
     
-    if (label.includes(searchText) || value.includes(searchText)) {
+    // 支持在 label、value、searchText 和 displayName 中搜索
+    if (label.includes(searchText) || value.includes(searchText) || searchTextField.includes(searchText) || displayName.includes(searchText)) {
       matched.push({
         ...opt,
         matched: true
@@ -164,6 +177,20 @@ const highlightMatch = (text, searchText) => {
   return String(text).replace(regex, '<mark>$1</mark>')
 }
 
+// 更新下拉框位置
+const updateDropdownPosition = () => {
+  if (!inputRef.value || !isOpen.value) return
+  
+  nextTick(() => {
+    const rect = inputRef.value.getBoundingClientRect()
+    dropdownStyle.value = {
+      top: `${rect.bottom + window.scrollY + 4}px`,
+      left: `${rect.left + window.scrollX}px`,
+      width: `${rect.width}px`
+    }
+  })
+}
+
 // 处理输入
 const handleInput = (event) => {
   inputValue.value = event.target.value
@@ -171,6 +198,7 @@ const handleInput = (event) => {
   isOpen.value = true
   highlightedIndex.value = 0
   showAllOnClick.value = false // 输入时取消"显示全部"标记
+  updateDropdownPosition()
 }
 
 // 处理焦点
@@ -179,6 +207,7 @@ const handleFocus = () => {
     // 点击输入框时，总是显示所有选项
     showAllOnClick.value = true
     isOpen.value = true
+    updateDropdownPosition()
   }
 }
 
@@ -202,6 +231,7 @@ const toggleDropdown = () => {
       showAllOnClick.value = true
       nextTick(() => {
         inputRef.value?.focus()
+        updateDropdownPosition()
       })
     } else if (!isOpen.value) {
       showAllOnClick.value = false
@@ -211,7 +241,15 @@ const toggleDropdown = () => {
 
 // 选择选项
 const selectOption = (value) => {
-  inputValue.value = value
+  // 查找选中的选项，显示 displayName 或 label
+  const option = normalizedOptions.value.find(opt => String(opt.value) === String(value))
+  if (option && option.displayName) {
+    inputValue.value = option.displayName
+  } else if (option && option.label) {
+    inputValue.value = option.label
+  } else {
+    inputValue.value = value
+  }
   emit('update:modelValue', value)
   isOpen.value = false
   highlightedIndex.value = 0
@@ -221,18 +259,41 @@ const selectOption = (value) => {
 const handleKeydown = (event) => {
   if (!isOpen.value || filteredOptions.value.length === 0) return
   
+  // 获取可选择的选项（非禁用）
+  const selectableOptions = filteredOptions.value.filter(opt => !opt.disabled)
+  if (selectableOptions.length === 0) return
+  
+  // 找到当前高亮选项在可选择选项中的索引
+  const currentHighlighted = filteredOptions.value[highlightedIndex.value]
+  let currentSelectableIndex = selectableOptions.findIndex(opt => opt === currentHighlighted)
+  if (currentSelectableIndex === -1) {
+    currentSelectableIndex = 0
+  }
+  
   switch (event.key) {
     case 'ArrowDown':
       event.preventDefault()
-      highlightedIndex.value = Math.min(highlightedIndex.value + 1, filteredOptions.value.length - 1)
+      // 找到下一个可选择的选项
+      let nextIndex = currentSelectableIndex + 1
+      if (nextIndex >= selectableOptions.length) {
+        nextIndex = 0
+      }
+      const nextOption = selectableOptions[nextIndex]
+      highlightedIndex.value = filteredOptions.value.findIndex(opt => opt === nextOption)
       break
     case 'ArrowUp':
       event.preventDefault()
-      highlightedIndex.value = Math.max(highlightedIndex.value - 1, 0)
+      // 找到上一个可选择的选项
+      let prevIndex = currentSelectableIndex - 1
+      if (prevIndex < 0) {
+        prevIndex = selectableOptions.length - 1
+      }
+      const prevOption = selectableOptions[prevIndex]
+      highlightedIndex.value = filteredOptions.value.findIndex(opt => opt === prevOption)
       break
     case 'Enter':
       event.preventDefault()
-      if (filteredOptions.value[highlightedIndex.value]) {
+      if (filteredOptions.value[highlightedIndex.value] && !filteredOptions.value[highlightedIndex.value].disabled) {
         selectOption(filteredOptions.value[highlightedIndex.value].value)
       }
       break
@@ -245,10 +306,47 @@ const handleKeydown = (event) => {
 
 // 监听外部值变化
 watch(() => props.modelValue, (newVal) => {
-  if (newVal !== inputValue.value) {
-    inputValue.value = newVal || ''
+  // 如果当前 inputValue 对应的 value 与 newVal 相同，不需要更新
+  const currentOption = normalizedOptions.value.find(opt => {
+    const displayName = opt.displayName || opt.label || ''
+    return String(displayName) === String(inputValue.value) && String(opt.value) === String(newVal)
+  })
+  if (currentOption) {
+    return // 已经显示正确的值，不需要更新
+  }
+  
+  // 如果值变化，查找对应的选项并显示 displayName 或 label
+  if (!newVal || newVal === '') {
+    inputValue.value = ''
+    return
+  }
+  
+  const option = normalizedOptions.value.find(opt => String(opt.value) === String(newVal))
+  if (option && option.displayName) {
+    inputValue.value = option.displayName
+  } else if (option && option.label) {
+    inputValue.value = option.label
+  } else {
+    // 如果找不到选项，保持当前值或使用新值
+    const currentOptionByValue = normalizedOptions.value.find(opt => String(opt.value) === String(inputValue.value))
+    if (!currentOptionByValue) {
+      inputValue.value = newVal || ''
+    }
   }
 }, { immediate: true })
+
+// 监听下拉框打开状态，更新位置
+watch(isOpen, (newVal) => {
+  if (newVal) {
+    updateDropdownPosition()
+    // 监听滚动和窗口大小变化
+    window.addEventListener('scroll', updateDropdownPosition, true)
+    window.addEventListener('resize', updateDropdownPosition)
+  } else {
+    window.removeEventListener('scroll', updateDropdownPosition, true)
+    window.removeEventListener('resize', updateDropdownPosition)
+  }
+})
 
 // 初始化
 watch(() => props.options, () => {
@@ -262,12 +360,23 @@ watch(() => props.options, () => {
     return
   }
 }, { immediate: true })
+
+// 组件卸载时清理
+onUnmounted(() => {
+  window.removeEventListener('scroll', updateDropdownPosition, true)
+  window.removeEventListener('resize', updateDropdownPosition)
+})
 </script>
 
 <style scoped>
 .smart-select {
   position: relative;
   width: 100%;
+  z-index: 1;
+}
+
+.smart-select.is-open {
+  z-index: 9999;
 }
 
 .smart-select-input-wrapper {
@@ -327,10 +436,7 @@ watch(() => props.options, () => {
 }
 
 .smart-select-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
+  position: fixed;
   margin-top: 0.2rem;
   background: #ffffff;
   border: 2px solid #d0d0d0;
@@ -338,7 +444,7 @@ watch(() => props.options, () => {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   max-height: 300px;
   overflow-y: auto;
-  z-index: 1000;
+  z-index: 99999;
   animation: slideDown 0.2s ease;
 }
 

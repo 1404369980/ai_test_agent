@@ -51,6 +51,22 @@
               <p>管理商户ID、App ID和私钥</p>
             </div>
           </button>
+          
+          <button @click="goToMockData" class="home-button config-btn">
+            <div class="button-icon">🎭</div>
+            <div class="button-content">
+              <h3>参数 Mock</h3>
+              <p>管理个人信息和信用卡Mock数据</p>
+            </div>
+          </button>
+          
+          <button @click="goToTestCards" class="home-button config-btn">
+            <div class="button-icon">💳</div>
+            <div class="button-content">
+              <h3>测试卡号</h3>
+              <p>管理不同支付渠道的测试卡号</p>
+            </div>
+          </button>
         </div>
       </div>
     </div>
@@ -80,6 +96,14 @@ const goToComponentTest = () => {
 
 const goToUserConfig = () => {
   router.push('/user-config')
+}
+
+const goToMockData = () => {
+  router.push('/mock-data')
+}
+
+const goToTestCards = () => {
+  router.push('/test-cards')
 }
 </script>
 
