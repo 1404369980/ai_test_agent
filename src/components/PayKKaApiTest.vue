@@ -380,6 +380,46 @@
                 :disabled="!transactionData.enablePaymentInfo"
               />
             </div>
+            <div class="form-group">
+              <label>存储卡信息 (Store Payment Method)</label>
+              <SmartSelect
+                v-model="storePaymentMethodText"
+                :options="[
+                  { value: 'true', label: 'true - 存储卡信息' },
+                  { value: 'false', label: 'false - 不存储' }
+                ]"
+                placeholder="选择或输入 true/false"
+                :disabled="!transactionData.enablePaymentInfo"
+              />
+              <small class="field-desc">若payment_type为RECURRING，此字段为True代表告知顾客在当前订单支付完成时将保存支付用于后续循环</small>
+            </div>
+          </div>
+          <div v-show="!sectionCollapsed.paymentInfo" class="form-row-2" :class="{ 'disabled-section': !transactionData.enablePaymentInfo }">
+            <div class="form-group">
+              <label>Token用途 (Token Usage)</label>
+              <SmartSelect
+                v-model="transactionData.tokenUsage"
+                :options="[
+                  { value: 'CARD_ON_FILE', label: 'CARD_ON_FILE - 消费交易' },
+                  { value: 'SUBSCRIPTION', label: 'SUBSCRIPTION - 循环交易' }
+                ]"
+                placeholder="选择或输入 CARD_ON_FILE/SUBSCRIPTION"
+                :disabled="!transactionData.enablePaymentInfo"
+              />
+              <small class="field-desc">token用途，当store_payment_method=true或者token支付时必传</small>
+            </div>
+            <div class="form-group">
+              <label>卡令牌 (Token)</label>
+              <input 
+                v-model="transactionData.token" 
+                type="text" 
+                placeholder="CS200395192979024625"
+                maxlength="64"
+                class="input-field"
+                :disabled="!transactionData.enablePaymentInfo"
+              />
+              <small class="field-desc">卡令牌，BANKCARD支付方式下[token, card_no, encrypted_card_no]三选一（0-64个字符）</small>
+            </div>
           </div>
 
           <div class="divider"></div>
@@ -956,10 +996,99 @@
             </div>
           </div>
 
+          <div class="divider"></div>
+
+          <div class="section-header">
+            <div class="section-header-title" @click="sectionCollapsed.queryTransaction = !sectionCollapsed.queryTransaction" style="cursor: pointer;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem; transition: transform 0.3s;" :style="{ transform: sectionCollapsed.queryTransaction ? 'rotate(-90deg)' : 'rotate(0deg)' }">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+              <h3>交易查询</h3>
+            </div>
+            <div class="section-header-actions">
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="queryData.enabled" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">{{ queryData.enabled ? '启用' : '禁用' }}</span>
+              </label>
+            </div>
+          </div>
+          
+          <div v-show="!sectionCollapsed.queryTransaction" class="query-tip">
+            <p>💡 <strong>提示：</strong></p>
+            <ul>
+              <li>提交交易成功后，交易ID会自动填入查询参数</li>
+              <li>至少需要填写<strong>交易ID (Trans ID)</strong>或<strong>订单ID (Order ID)</strong>之一</li>
+              <li>查询交易使用与提交交易相同的签名逻辑（SHA256_WITH_RSA）</li>
+              <li>查询结果会显示在"交易查询结果"部分</li>
+            </ul>
+          </div>
+          
+          <div v-show="!sectionCollapsed.queryTransaction" class="form-row-2" :class="{ 'disabled-section': !queryData.enabled }">
+            <div class="form-group">
+              <label>商户ID (Merchant ID)</label>
+              <input 
+                v-model="queryData.merchantId" 
+                type="text" 
+                placeholder="18356675194960"
+                class="input-field"
+                :disabled="!queryData.enabled"
+              />
+            </div>
+            <div class="form-group">
+              <label>交易ID (Trans ID)</label>
+              <input 
+                v-model="queryData.transId" 
+                type="text" 
+                placeholder="留空则查询 order_id"
+                class="input-field"
+                :disabled="!queryData.enabled"
+              />
+            </div>
+          </div>
+          
+          <div v-show="!sectionCollapsed.queryTransaction" class="form-row-2" :class="{ 'disabled-section': !queryData.enabled }">
+            <div class="form-group">
+              <label>订单ID (Order ID)</label>
+              <input 
+                v-model="queryData.orderId" 
+                type="text" 
+                placeholder="GW20620xxxxx6999"
+                class="input-field"
+                :disabled="!queryData.enabled"
+              />
+            </div>
+            <div class="form-group">
+              <label>会话ID (Session ID)</label>
+              <input 
+                v-model="queryData.sessionId" 
+                type="text" 
+                placeholder="留空"
+                class="input-field"
+                :disabled="!queryData.enabled"
+              />
+            </div>
+          </div>
+          
+          <div v-show="!sectionCollapsed.queryTransaction" class="form-group" :class="{ 'disabled-section': !queryData.enabled }">
+            <label>时间戳 (Timestamp)</label>
+            <input 
+              v-model="queryData.timestamp" 
+              type="number" 
+              placeholder="自动生成当前时间戳"
+              class="input-field"
+              :disabled="!queryData.enabled"
+            />
+            <small class="field-desc">留空则自动使用当前时间戳</small>
+          </div>
+
           <div class="button-group">
             <button @click="generateAllRandom" class="btn-random">一键随机生成所有参数</button>
             <button @click="submitTransaction" :disabled="loading" class="btn-primary">
               {{ loading ? '处理中...' : '提交交易' }}
+            </button>
+            <button @click="queryTransaction" class="btn-primary" :disabled="!canQuery || queryLoading || !queryData.enabled">
+              {{ queryLoading ? '查询中...' : '🔍 查询交易' }}
             </button>
             <button @click="resetForm" class="btn-secondary">重置表单</button>
           </div>
@@ -1011,6 +1140,87 @@
             </div>
           </div>
 
+          <div class="divider"></div>
+
+          <h2>交易查询结果</h2>
+          
+          <div v-if="queryResult" class="query-result-container">
+            <div class="result-header">
+              <label>查询响应结果</label>
+              <div class="result-header-actions">
+                <button @click="queryResultCollapsed = !queryResultCollapsed" class="btn-toggle-collapse" :title="queryResultCollapsed ? '展开' : '折叠'">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path v-if="queryResultCollapsed" d="M9 18l6-6-6-6"/>
+                    <path v-else d="M18 15l-6-6-6 6"/>
+                  </svg>
+                  {{ queryResultCollapsed ? '展开' : '折叠' }}
+                </button>
+              </div>
+            </div>
+            <div v-show="!queryResultCollapsed" class="json-display-container">
+              <textarea 
+                :value="queryResultText" 
+                readonly
+                class="json-edit"
+                spellcheck="false"
+              ></textarea>
+              <div class="json-actions">
+                <button @click="extractRecurringAgreementId" class="btn-extract" title="提取循环协议ID和Token">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  提取循环协议ID和Token
+                </button>
+                <button @click="copyQueryResult" class="btn-copy" title="复制">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  复制
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="queryError" class="query-error-container">
+            <div class="result-header">
+              <label>查询错误信息</label>
+              <div class="result-header-actions">
+                <button @click="queryErrorCollapsed = !queryErrorCollapsed" class="btn-toggle-collapse" :title="queryErrorCollapsed ? '展开' : '折叠'">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path v-if="queryErrorCollapsed" d="M9 18l6-6-6-6"/>
+                    <path v-else d="M18 15l-6-6-6 6"/>
+                  </svg>
+                  {{ queryErrorCollapsed ? '展开' : '折叠' }}
+                </button>
+              </div>
+            </div>
+            <div v-show="!queryErrorCollapsed" class="json-display-container">
+              <textarea 
+                :value="queryError" 
+                readonly
+                class="json-edit error-text"
+                spellcheck="false"
+              ></textarea>
+              <div class="json-actions">
+                <button @click="copyQueryError" class="btn-copy" title="复制">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  复制
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="!queryResult && !queryError" class="empty-state">
+            <p>暂无查询结果</p>
+            <p class="empty-state-desc">点击"查询交易"按钮查询交易信息</p>
+          </div>
+          
           <div class="divider"></div>
 
           <h2>测试结果</h2>
@@ -1075,14 +1285,6 @@
                     spellcheck="false"
                   ></textarea>
                   <div class="json-actions">
-                    <button @click="extractRecurringAgreementId" class="btn-extract" title="提取循环协议ID">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="17 8 12 3 7 8"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                      </svg>
-                      提取循环协议ID
-                    </button>
                     <button @click="copyResultText(formatJson(result.responseData))" class="btn-copy" title="复制JSON">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -1127,8 +1329,8 @@
     </div>
         </div>
       </div>
-    </div>
-    
+              </div>
+
     <!-- Toast 提示 -->
     <Toast />
     
@@ -1184,8 +1386,8 @@
                 class="card-search-input"
               />
             </div>
-          </div>
-          
+              </div>
+
           <!-- 测试卡号列表 -->
           <div class="test-card-list">
             <div 
@@ -1228,7 +1430,8 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import Toast from './Toast.vue'
 import SmartSelect from './SmartSelect.vue'
-import { payKKaApi } from '../services/paykkaApi'
+import { getAllPersonalInfo } from '../services/mockDataManager'
+import { payKKaApi, queryTransaction as queryTransactionApi } from '../services/paykkaApi'
 import { showError, showSuccess, showInfo } from '../utils/toast'
 import { useNavigation } from '../composables/useNavigation'
 import { useMerchantConfig } from '../composables/useMerchantConfig'
@@ -1366,6 +1569,9 @@ const transactionData = reactive({
   cvv: '',
   holderName: '',
   holderEmail: '',
+  storePaymentMethod: false, // 是否存储卡信息
+  tokenUsage: '', // Token用途 (CARD_ON_FILE/SUBSCRIPTION)
+  token: '', // 卡令牌 (0-64字符)
   // 浏览器信息
   enableBrowserInfo: true,
   userAgent: '',
@@ -1384,6 +1590,21 @@ const transactionData = reactive({
 
 const result = ref(null)
 
+// 交易查询相关
+const queryData = reactive({
+  enabled: true,
+  merchantId: '',
+  transId: '',
+  orderId: '',
+  sessionId: '',
+  timestamp: ''
+})
+const queryResult = ref(null)
+const queryError = ref(null)
+const queryResultCollapsed = ref(false)
+const queryErrorCollapsed = ref(false)
+const queryLoading = ref(false)
+
 // Mock数据相关
 const mockData = ref(null)
 const mockDataLoaded = ref(false)
@@ -1398,11 +1619,12 @@ const cardSearchText = ref('') // 卡号搜索文本
 
 // 各个信息部分的折叠状态（默认折叠，减少页面显示）
 const sectionCollapsed = reactive({
-  paymentInfo: true,
-  browserInfo: true,
-  customerInfo: false, // 客户信息默认展开（必填）
-  billInfo: true,
-  shipInfo: true
+  paymentInfo: true, // 支付信息默认折叠
+  browserInfo: true, // 浏览器信息默认折叠
+  customerInfo: true, // 客户信息默认折叠
+  billInfo: true, // 账单信息默认折叠
+  shipInfo: true, // 收货信息默认折叠
+  queryTransaction: true // 交易查询默认折叠
 })
 
 // JSON展示相关
@@ -1452,6 +1674,26 @@ const mitText = computed({
       // 尝试解析
       const lowerVal = String(val).toLowerCase().trim()
       transactionData.mit = lowerVal === 'true' || lowerVal === '1' || lowerVal === 'yes'
+    }
+  }
+})
+
+// Store Payment Method 文本输入处理（布尔值转文本）
+const storePaymentMethodText = computed({
+  get: () => {
+    if (transactionData.storePaymentMethod === true || transactionData.storePaymentMethod === 'true') return 'true'
+    if (transactionData.storePaymentMethod === false || transactionData.storePaymentMethod === 'false') return 'false'
+    return String(transactionData.storePaymentMethod || 'false')
+  },
+  set: (val) => {
+    if (val === 'true' || val === true) {
+      transactionData.storePaymentMethod = true
+    } else if (val === 'false' || val === false) {
+      transactionData.storePaymentMethod = false
+    } else {
+      // 尝试解析
+      const lowerVal = String(val).toLowerCase().trim()
+      transactionData.storePaymentMethod = lowerVal === 'true' || lowerVal === '1' || lowerVal === 'yes'
     }
   }
 })
@@ -1581,41 +1823,103 @@ const generateRandomDescription = () => {
   transactionData.description = descriptions[Math.floor(Math.random() * descriptions.length)]
 }
 
-// Mock数据选项
+// Mock数据选项（合并 mock_data.json 和用户添加的个人信息）
 const billMockOptions = computed(() => {
-  if (!mockData.value || !mockData.value.personalInfo) {
-    return []
+  const options = []
+  let index = 0
+  
+  // 首先添加 mock_data.json 中的个人信息（预设数据）
+  if (mockData.value && mockData.value.personalInfo && mockData.value.personalInfo.length > 0) {
+    mockData.value.personalInfo.forEach((item) => {
+      const fullName = `${item.firstName} ${item.lastName}`
+      const displayLabel = `${fullName} - ${item.city}, ${item.country}`
+      const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
+      options.push({
+        value: `json_${index}`,
+        label: displayLabel,
+        searchText: searchText,
+        displayName: fullName,
+        source: 'json',
+        dataIndex: index
+      })
+      index++
+    })
   }
-  return mockData.value.personalInfo.map((item, index) => {
-    const fullName = `${item.firstName} ${item.lastName}`
-    const displayLabel = `${fullName} - ${item.city}, ${item.country}`
-    // 添加搜索关键词：姓名、国家、城市
-    const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
-    return {
-      value: String(index),
-      label: displayLabel,
-      searchText: searchText, // 用于搜索的关键词
-      displayName: fullName // 选中后显示的名称
+  
+  // 然后添加用户添加的个人信息（localStorage）
+  try {
+    const userPersonalInfo = getAllPersonalInfo()
+    if (userPersonalInfo && userPersonalInfo.length > 0) {
+      userPersonalInfo.forEach((item) => {
+        const fullName = `${item.firstName} ${item.lastName}`
+        const displayLabel = `${fullName} - ${item.city}, ${item.country}`
+        const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
+        options.push({
+          value: `user_${item.id || index}`,
+          label: displayLabel,
+          searchText: searchText,
+          displayName: fullName,
+          source: 'user',
+          dataIndex: index,
+          userData: item
+        })
+        index++
+      })
     }
-  })
+  } catch (error) {
+    console.error('获取用户个人信息失败:', error)
+  }
+  
+  return options
 })
 
 const shipMockOptions = computed(() => {
-  if (!mockData.value || !mockData.value.personalInfo) {
-    return []
+  const options = []
+  let index = 0
+  
+  // 首先添加 mock_data.json 中的个人信息（预设数据）
+  if (mockData.value && mockData.value.personalInfo && mockData.value.personalInfo.length > 0) {
+    mockData.value.personalInfo.forEach((item) => {
+      const fullName = `${item.firstName} ${item.lastName}`
+      const displayLabel = `${fullName} - ${item.city}, ${item.country}`
+      const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
+      options.push({
+        value: `json_${index}`,
+        label: displayLabel,
+        searchText: searchText,
+        displayName: fullName,
+        source: 'json',
+        dataIndex: index
+      })
+      index++
+    })
   }
-  return mockData.value.personalInfo.map((item, index) => {
-    const fullName = `${item.firstName} ${item.lastName}`
-    const displayLabel = `${fullName} - ${item.city}, ${item.country}`
-    // 添加搜索关键词：姓名、国家、城市
-    const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
-    return {
-      value: String(index),
-      label: displayLabel,
-      searchText: searchText, // 用于搜索的关键词
-      displayName: fullName // 选中后显示的名称
+  
+  // 然后添加用户添加的个人信息（localStorage）
+  try {
+    const userPersonalInfo = getAllPersonalInfo()
+    if (userPersonalInfo && userPersonalInfo.length > 0) {
+      userPersonalInfo.forEach((item) => {
+        const fullName = `${item.firstName} ${item.lastName}`
+        const displayLabel = `${fullName} - ${item.city}, ${item.country}`
+        const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
+        options.push({
+          value: `user_${item.id || index}`,
+          label: displayLabel,
+          searchText: searchText,
+          displayName: fullName,
+          source: 'user',
+          dataIndex: index,
+          userData: item
+        })
+        index++
+      })
     }
-  })
+  } catch (error) {
+    console.error('获取用户个人信息失败:', error)
+  }
+  
+  return options
 })
 
 // 测试卡号选项
@@ -1842,12 +2146,26 @@ const selectTestCard = (cardNo) => {
 }
 
 // 从Mock数据应用账单信息
-const applyBillFromMock = (index) => {
-  if (!mockData.value || !mockData.value.personalInfo || !mockData.value.personalInfo[index]) {
-    return
+const applyBillFromMock = (value) => {
+  let item = null
+  
+  // 根据 value 判断数据来源
+  if (value.startsWith('json_')) {
+    // 来自 mock_data.json
+    const index = parseInt(value.replace('json_', ''))
+    if (mockData.value && mockData.value.personalInfo && mockData.value.personalInfo[index]) {
+      item = mockData.value.personalInfo[index]
+    }
+  } else if (value.startsWith('user_')) {
+    // 来自用户添加的个人信息
+    const id = value.replace('user_', '')
+    const userPersonalInfo = getAllPersonalInfo()
+    item = userPersonalInfo.find(p => p.id === id)
   }
   
-  const item = mockData.value.personalInfo[index]
+  if (!item) {
+    return
+  }
   
   transactionData.billFirstName = item.firstName
   transactionData.billLastName = item.lastName
@@ -1865,12 +2183,26 @@ const applyBillFromMock = (index) => {
 }
 
 // 从Mock数据应用收货信息
-const applyShipFromMock = (index) => {
-  if (!mockData.value || !mockData.value.personalInfo || !mockData.value.personalInfo[index]) {
-    return
+const applyShipFromMock = (value) => {
+  let item = null
+  
+  // 根据 value 判断数据来源
+  if (value.startsWith('json_')) {
+    // 来自 mock_data.json
+    const index = parseInt(value.replace('json_', ''))
+    if (mockData.value && mockData.value.personalInfo && mockData.value.personalInfo[index]) {
+      item = mockData.value.personalInfo[index]
+    }
+  } else if (value.startsWith('user_')) {
+    // 来自用户添加的个人信息
+    const id = value.replace('user_', '')
+    const userPersonalInfo = getAllPersonalInfo()
+    item = userPersonalInfo.find(p => p.id === id)
   }
   
-  const item = mockData.value.personalInfo[index]
+  if (!item) {
+    return
+  }
   
   transactionData.shipFirstName = item.firstName
   transactionData.shipLastName = item.lastName
@@ -1887,7 +2219,7 @@ const applyShipFromMock = (index) => {
 // 监听账单信息Mock数据选择，自动应用
 watch(selectedBillMock, (newValue) => {
   if (newValue && newValue !== '') {
-    applyBillFromMock(parseInt(newValue))
+    applyBillFromMock(newValue)
     showSuccess('已应用预设账单信息')
   }
 })
@@ -1895,7 +2227,7 @@ watch(selectedBillMock, (newValue) => {
 // 监听收货信息Mock数据选择，自动应用
 watch(selectedShipMock, (newValue) => {
   if (newValue && newValue !== '') {
-    applyShipFromMock(parseInt(newValue))
+    applyShipFromMock(newValue)
     showSuccess('已应用预设收货信息')
   }
 })
@@ -2207,6 +2539,21 @@ const buildRequestParams = () => {
       if (transactionData.holderName) obj.holder_name = transactionData.holderName
       if (transactionData.holderEmail) obj.holder_email = transactionData.holderEmail
       
+      // 存储卡信息字段（当 payment_type 为 RECURRING 时使用）
+      if (transactionData.storePaymentMethod !== undefined && transactionData.storePaymentMethod !== null) {
+        obj.store_payment_method = transactionData.storePaymentMethod === true || transactionData.storePaymentMethod === 'true'
+      }
+      
+      // Token用途字段（当store_payment_method=true或者token支付时必传）
+      if (transactionData.tokenUsage) {
+        obj.token_usage = transactionData.tokenUsage
+      }
+      
+      // 卡令牌字段（BANKCARD支付方式下[token, card_no, encrypted_card_no]三选一）
+      if (transactionData.token) {
+        obj.token = transactionData.token
+      }
+      
       // payment 对象必须存在（至少包含 payment_method），所以总是返回对象
       return obj
     }
@@ -2356,6 +2703,14 @@ watch(editableJson, (newValue) => {
   }
 })
 
+// 监听支付类型变化，当选择循环支付时自动设置存储卡信息为 true 和 tokenUsage 为 SUBSCRIPTION
+watch(() => transactionData.paymentType, (newValue) => {
+  if (newValue === 'RECURRING') {
+    transactionData.storePaymentMethod = true
+    transactionData.tokenUsage = 'SUBSCRIPTION'
+  }
+})
+
 // 切换JSON折叠状态
 const toggleJsonCollapse = () => {
   isJsonCollapsed.value = !isJsonCollapsed.value
@@ -2494,6 +2849,11 @@ const updateFormFromJson = () => {
       if (params.payment.cvv) transactionData.cvv = params.payment.cvv
       if (params.payment.holder_name) transactionData.holderName = params.payment.holder_name
       if (params.payment.holder_email) transactionData.holderEmail = params.payment.holder_email
+      if (params.payment.store_payment_method !== undefined && params.payment.store_payment_method !== null) {
+        transactionData.storePaymentMethod = params.payment.store_payment_method === true || params.payment.store_payment_method === 'true'
+      }
+      if (params.payment.token_usage) transactionData.tokenUsage = params.payment.token_usage
+      if (params.payment.token) transactionData.token = params.payment.token
     }
     
     // 更新浏览器信息
@@ -2582,39 +2942,69 @@ const copyJson = async () => {
   }
 }
 
-// 提取循环协议ID
+// 提取循环协议ID和Token（从交易查询结果中读取）
 const extractRecurringAgreementId = () => {
-  if (!result.value || !result.value.responseData) {
-    showError('暂无响应数据')
+  if (!queryResult.value) {
+    showError('暂无查询结果数据，请先查询交易')
     return
   }
 
   try {
-    const responseData = result.value.responseData
-    // 尝试从 data.recurring_agreement_id 提取
+    // 从交易查询结果中读取数据
+    let queryData = null
+    if (typeof queryResult.value === 'string') {
+      queryData = JSON.parse(queryResult.value)
+    } else {
+      queryData = queryResult.value
+    }
+
+    let extractedCount = 0
+    const extractedItems = []
+
+    // 提取 recurring_agreement_id
     let recurringAgreementId = null
-    
-    if (responseData.data && responseData.data.recurring_agreement_id) {
-      recurringAgreementId = responseData.data.recurring_agreement_id
-    } else if (responseData.recurring_agreement_id) {
-      recurringAgreementId = responseData.recurring_agreement_id
+    if (queryData.data && queryData.data.recurring_agreement_id) {
+      recurringAgreementId = queryData.data.recurring_agreement_id
+    } else if (queryData.recurring_agreement_id) {
+      recurringAgreementId = queryData.recurring_agreement_id
     }
 
     if (recurringAgreementId) {
       transactionData.recurringAgreementId = String(recurringAgreementId)
       // 自动设置商户主动发起 (MIT) 为 true
       transactionData.mit = true
+      extractedCount++
+      extractedItems.push(`循环协议ID: ${recurringAgreementId}`)
+    }
+
+    // 提取 token
+    let token = null
+    if (queryData.data && queryData.data.token) {
+      token = queryData.data.token
+    } else if (queryData.token) {
+      token = queryData.token
+    } else if (queryData.payment && queryData.payment.token) {
+      token = queryData.payment.token
+    }
+
+    if (token) {
+      transactionData.token = String(token)
+      extractedCount++
+      extractedItems.push(`Token: ${token}`)
+    }
+
+    if (extractedCount > 0) {
       // 如果支付类型不是 RECURRING，提示用户
-      if (transactionData.paymentType !== 'RECURRING') {
-        showInfo('已提取循环协议ID并设置MIT为true，请将支付类型设置为 RECURRING 以使用该参数')
+      if (transactionData.paymentType !== 'RECURRING' && recurringAgreementId) {
+        showInfo(`已提取：${extractedItems.join('，')}。请将支付类型设置为 RECURRING 以使用循环协议ID`)
       } else {
-        showSuccess(`已提取循环协议ID: ${recurringAgreementId}，并设置商户主动发起(MIT)为true`)
+        showSuccess(`已提取：${extractedItems.join('，')}`)
       }
     } else {
-      showError('请使用循环支付，并确保交易成功')
+      showError('未找到循环协议ID或Token，请确保查询结果中包含这些字段')
     }
   } catch (error) {
-    showError('请使用循环支付，并确保交易成功')
+    showError(`提取失败：${error.message}`)
   }
 }
 
@@ -2715,6 +3105,9 @@ const resetForm = () => {
   transactionData.cvv = ''
   transactionData.holderName = ''
   transactionData.holderEmail = ''
+  transactionData.storePaymentMethod = false
+  transactionData.tokenUsage = ''
+  transactionData.token = ''
   
   // 浏览器信息
   transactionData.enableBrowserInfo = true
@@ -2815,6 +3208,85 @@ const validateMerchantConfig = () => {
 }
 
 // 提交交易
+// 交易查询
+const canQuery = computed(() => {
+  return !!(apiConfig.baseUrl && apiConfig.appId && apiConfig.privateKey && (queryData.merchantId || apiConfig.merchantId))
+})
+
+const queryTransaction = async () => {
+  // 验证商户配置
+  if (!apiConfig.baseUrl || !apiConfig.appId || !apiConfig.privateKey) {
+    showError('请先配置 API 地址、App ID 和私钥')
+    return
+  }
+
+  // 验证查询参数
+  if (!queryData.transId && !queryData.orderId) {
+    showError('请至少填写交易ID或订单ID')
+    return
+  }
+  
+  queryLoading.value = true
+  queryResult.value = null
+  queryError.value = null
+  
+  try {
+    const queryParams = {
+      merchant_id: queryData.merchantId || apiConfig.merchantId,
+      trans_id: queryData.transId || '',
+      order_id: queryData.orderId || '',
+      session_id: queryData.sessionId || '',
+      timestamp: queryData.timestamp || Date.now()
+    }
+    
+    const response = await queryTransactionApi(
+      apiConfig.baseUrl,
+      apiConfig.merchantId,
+      apiConfig.appId,
+      apiConfig.privateKey,
+      queryParams
+    )
+    
+    queryResult.value = response.data
+    showSuccess('查询成功')
+  } catch (error) {
+    console.error('查询交易失败:', error)
+    queryError.value = error.message || '查询失败'
+    showError('查询失败: ' + (error.message || '未知错误'))
+  } finally {
+    queryLoading.value = false
+  }
+}
+
+// 重置查询表单
+const resetQueryForm = () => {
+  queryData.merchantId = apiConfig.merchantId || ''
+  queryData.transId = ''
+  queryData.orderId = ''
+  queryData.sessionId = ''
+  queryData.timestamp = ''
+  queryResult.value = null
+  queryError.value = null
+  queryResultCollapsed.value = false
+  queryErrorCollapsed.value = false
+}
+
+// 查询结果文本
+const queryResultText = computed(() => {
+  if (!queryResult.value) return ''
+  return JSON.stringify(queryResult.value, null, 2)
+})
+
+// 复制查询结果
+const copyQueryResult = async () => {
+  await copyToClipboard(queryResultText.value)
+}
+
+// 复制查询错误
+const copyQueryError = async () => {
+  await copyToClipboard(queryError.value)
+}
+
 const submitTransaction = async () => {
   // 验证商户配置
   if (!validateMerchantConfig()) return
@@ -2925,6 +3397,21 @@ const submitTransaction = async () => {
       if (transactionData.holderName) obj.holder_name = transactionData.holderName
       if (transactionData.holderEmail) obj.holder_email = transactionData.holderEmail
       
+      // 存储卡信息字段（当 payment_type 为 RECURRING 时使用）
+      if (transactionData.storePaymentMethod !== undefined && transactionData.storePaymentMethod !== null) {
+        obj.store_payment_method = transactionData.storePaymentMethod === true || transactionData.storePaymentMethod === 'true'
+      }
+      
+      // Token用途字段（当store_payment_method=true或者token支付时必传）
+      if (transactionData.tokenUsage) {
+        obj.token_usage = transactionData.tokenUsage
+      }
+      
+      // 卡令牌字段（BANKCARD支付方式下[token, card_no, encrypted_card_no]三选一）
+      if (transactionData.token) {
+        obj.token = transactionData.token
+      }
+      
       // payment 对象必须存在（至少包含 payment_method），所以总是返回对象
       return obj
     }
@@ -3001,6 +3488,18 @@ const submitTransaction = async () => {
       requestData: requestData,
       responseData: response.data || response // 只保存API返回的响应数据
     }
+    
+    // 提交成功后，自动填入查询参数
+    if (queryData.enabled) {
+      queryData.merchantId = apiConfig.merchantId || queryData.merchantId
+      queryData.transId = transactionData.transId
+      // 如果响应中有 order_id，也自动填入
+      if (response.data && response.data.order_id) {
+        queryData.orderId = response.data.order_id
+      }
+      queryData.timestamp = Date.now()
+      showInfo('交易ID已自动填入查询参数')
+    }
   } catch (error) {
     // 即使失败也记录交易ID，避免重复提交
     lastSubmittedTransId.value = transactionData.transId
@@ -3040,6 +3539,8 @@ const loadMockData = async () => {
 onMounted(() => {
   loadMerchantConfigs()
   loadMockData()
+  // 初始化查询表单的商户ID
+  queryData.merchantId = apiConfig.merchantId || ''
 })
 </script>
 
@@ -4391,6 +4892,48 @@ code {
 .empty-state-desc {
   font-size: 0.85rem;
   color: #bbb;
+}
+
+.query-tip {
+  padding: 0.8rem 1rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  border-left: 4px solid #667eea;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.query-tip p {
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+  color: #667eea;
+  font-size: 0.85rem;
+}
+
+.query-tip ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  list-style: none;
+}
+
+.query-tip li {
+  margin-bottom: 0.4rem;
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.5;
+  position: relative;
+}
+
+.query-tip li::before {
+  content: "•";
+  color: #667eea;
+  font-weight: bold;
+  position: absolute;
+  left: -1rem;
+}
+
+.query-tip li strong {
+  color: #333;
+  font-weight: 600;
 }
 
 .btn-select-card {

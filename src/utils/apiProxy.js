@@ -10,7 +10,17 @@
 
 // 后端代理接口的基础路径（可通过环境变量配置）
 // 格式：http://host:port/path 或 /path（相对路径）
-const PROXY_BASE_URL = import.meta.env.VITE_PROXY_BASE_URL || 'http://127.0.0.1:8080/proxy/payment'
+// 生产环境（与 Spring Boot 一起部署）使用相对路径，开发环境使用绝对路径
+const getDefaultProxyUrl = () => {
+  // 生产环境使用相对路径（与 Spring Boot 集成）
+  if (import.meta.env.PROD) {
+    return '/proxy/payment'
+  }
+  // 开发环境使用绝对路径
+  return 'http://127.0.0.1:8080/proxy/payment'
+}
+
+const PROXY_BASE_URL = import.meta.env.VITE_PROXY_BASE_URL || getDefaultProxyUrl()
 
 /**
  * 获取代理后的 API URL

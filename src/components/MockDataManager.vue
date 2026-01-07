@@ -113,18 +113,18 @@
           </div>
         </div>
         
-        <!-- 个人信息Mock数据 -->
+        <!-- 用户个人信息 -->
         <div class="mock-section">
           <div class="section-header">
-            <h2>个人信息 Mock 数据</h2>
+            <h2>用户个人信息</h2>
             <div class="header-actions">
               <button @click="showPersonalForm = true" class="btn-primary">+ 添加</button>
             </div>
           </div>
           
           <div v-if="personalInfoList.length === 0" class="empty-state">
-            <p>暂无个人信息数据</p>
-            <p class="empty-state-desc">点击"批量生成"或"添加"创建数据</p>
+            <p>暂无用户个人信息数据</p>
+            <p class="empty-state-desc">点击"添加"创建数据，此数据可在收货、账单信息的选择预设框中使用</p>
           </div>
           
           <div v-else class="data-list">

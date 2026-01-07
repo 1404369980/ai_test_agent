@@ -54,6 +54,57 @@ npm run build
 
 构建完成后，文件将输出到 `dist` 目录，可以部署到任何静态文件服务器。
 
+### 与 Spring Boot 项目集成
+
+本项目设计为与 Spring Boot 后端一起打包发布。集成步骤如下：
+
+1. **构建前端项目**
+   ```sh
+   npm run build
+   ```
+
+2. **复制构建文件到 Spring Boot 项目**
+   - 将 `dist` 目录下的所有文件复制到 Spring Boot 项目的 `src/main/resources/static` 目录
+   - 或者配置 Spring Boot 的静态资源路径指向 `dist` 目录
+
+3. **配置 Spring Boot 静态资源处理**
+   
+   在 Spring Boot 配置类中添加（如果需要支持 SPA 路由）：
+   ```java
+   @Configuration
+   public class WebMvcConfig implements WebMvcConfigurer {
+       @Override
+       public void addResourceHandlers(ResourceHandlerRegistry registry) {
+           registry.addResourceHandler("/**")
+                   .addResourceLocations("classpath:/static/");
+       }
+       
+       @Override
+       public void addViewControllers(ViewControllerRegistry registry) {
+           // 支持 Vue Router 的 history 模式
+           registry.addViewController("/").setViewName("forward:/index.html");
+       }
+   }
+   ```
+
+4. **配置 API 代理路径**
+   
+   前端默认使用 `/proxy/payment` 作为代理接口路径。确保 Spring Boot 后端提供对应的代理接口。
+   
+   如需自定义代理路径，可在构建时设置环境变量：
+   ```sh
+   VITE_PROXY_BASE_URL=/your/custom/path npm run build
+   ```
+
+5. **打包 Spring Boot 项目**
+   ```sh
+   mvn clean package
+   # 或
+   ./gradlew build
+   ```
+
+   打包后的 JAR 文件将包含前端静态资源，可直接运行。
+
 ### 预览生产构建
 
 ```sh

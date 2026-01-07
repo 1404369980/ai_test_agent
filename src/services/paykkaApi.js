@@ -281,36 +281,56 @@ export async function submitTransaction(baseUrl, merchantId, apiKey, transaction
  * @param {string} orderNo - 订单号
  * @returns {Promise<Object>} 响应数据
  */
-export async function queryTransaction(baseUrl, merchantId, apiKey, orderNo) {
+export async function queryTransaction(baseUrl, merchantId, appId, privateKey, queryParams) {
   try {
-    const requestParams = {
-      merchantId: merchantId,
-      orderNo: orderNo,
-      timestamp: Date.now(),
-      nonce: Math.random().toString(36).substring(2, 15)
+    if (!appId) {
+      throw new Error('必须提供x-paykka-appid')
     }
 
-    const signature = generateSignature(requestParams, apiKey)
-    requestParams.sign = signature
+    // 构建请求参数
+    const requestParams = {
+      merchant_id: queryParams.merchant_id || merchantId,
+      trans_id: queryParams.trans_id || '',
+      order_id: queryParams.order_id || '',
+      session_id: queryParams.session_id || '',
+      timestamp: queryParams.timestamp || Date.now()
+    }
+
+    // 自动生成timestamp和nonce（与 submitTransaction 保持一致）
+    const timestamp = Date.now()
+    const nonce = generateHeaderNonce()
+
+    // 构建请求头（与 submitTransaction 保持一致）
+    const requestHeaders = {
+      'Content-Type': 'application/json',
+      'x-paykka-appid': appId,
+      'x-paykka-timestamp': String(timestamp),
+      'x-paykka-nonce': nonce,
+      'x-paykka-sign-alg': 'SHA256_WITH_RSA'
+    }
+
+    // 生成请求头签名（与 submitTransaction 保持一致）
+    const requestBody = JSON.stringify(requestParams)
+    const sign = await generateHeaderSign(
+      'POST',
+      '/v3/payment/acq/query',
+      timestamp,
+      nonce,
+      requestBody,
+      privateKey,
+      false // 禁用日志输出
+    )
+    requestHeaders['x-paykka-sign'] = sign
 
     // 发送请求（通过后端代理接口解决 CORS 问题）
-    const proxyUrl = getProxyUrl(baseUrl, '/api/transaction/query')
-    const requestBody = JSON.stringify(requestParams)
-    const proxyHeaders = getProxyHeaders(baseUrl, '/api/transaction/query', {
-      'Content-Type': 'application/json',
-      'X-Merchant-Id': merchantId,
-      'X-API-Key': apiKey
-    })
+    const proxyUrl = getProxyUrl(baseUrl, '/v3/payment/acq/query')
+    const proxyHeaders = getProxyHeaders(baseUrl, '/v3/payment/acq/query', requestHeaders)
     
     // 如果 proxyHeaders 为 null，说明是本地服务，直接请求
     if (!proxyHeaders) {
-      const response = await fetch(`${baseUrl}/api/transaction/query`, {
+      const response = await fetch(`${baseUrl}/v3/payment/acq/query`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Merchant-Id': merchantId,
-          'X-API-Key': apiKey
-        },
+        headers: requestHeaders,
         body: requestBody,
         mode: 'cors',
         credentials: 'omit',
@@ -319,13 +339,19 @@ export async function queryTransaction(baseUrl, merchantId, apiKey, orderNo) {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        throw new Error(errorData.message || errorData.ret_msg || `HTTP error! status: ${response.status}`)
       }
       
       const data = await response.json()
       return {
         success: true,
         message: '查询成功',
+        signedData: requestParams,
+        requestHeaders: {
+          ...requestHeaders,
+          _generated_timestamp: timestamp,
+          _generated_nonce: nonce
+        },
         data: data
       }
     }
@@ -335,37 +361,29 @@ export async function queryTransaction(baseUrl, merchantId, apiKey, orderNo) {
       method: 'POST',
       headers: proxyHeaders,
       body: requestBody,
-      mode: 'cors', // 启用 CORS
-      credentials: 'omit', // 不发送 cookies
-      referrerPolicy: 'no-referrer-when-downgrade' // 设置引荐来源策略
+      mode: 'cors',
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer-when-downgrade'
     })
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+      throw new Error(errorData.message || errorData.ret_msg || `HTTP error! status: ${response.status}`)
     }
 
     const data = await response.json()
     return {
       success: true,
       message: '查询成功',
+      signedData: requestParams,
+      requestHeaders: {
+        ...requestHeaders,
+        _generated_timestamp: timestamp,
+        _generated_nonce: nonce
+      },
       data: data
     }
   } catch (error) {
-    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      return {
-        success: true,
-        message: '查询成功（模拟）',
-        data: {
-          orderNo: orderNo,
-          status: 'completed',
-          amount: 100.00,
-          currency: 'USD',
-          timestamp: new Date().toISOString(),
-          note: '这是模拟响应'
-        }
-      }
-    }
     throw error
   }
 }

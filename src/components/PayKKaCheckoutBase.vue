@@ -123,7 +123,7 @@
               <label>币种 (Currency)</label>
               <div class="input-with-button">
                 <SmartSelect
-                  v-model="checkoutData.currency"
+                  v-model="checkoutData.currency" 
                   :options="[
                     { value: 'USD', label: 'USD - 美元' },
                     { value: 'EUR', label: 'EUR - 欧元' },
@@ -145,7 +145,7 @@
             <div class="form-group">
               <label>支付类型 (Payment Type) <span class="required">*</span></label>
               <SmartSelect
-                v-model="checkoutData.paymentType"
+                v-model="checkoutData.paymentType" 
                 :options="[
                   { value: 'PURCHASE', label: 'PURCHASE - 消费' },
                   { value: 'PREPARE_AUTHORIZE', label: 'PREPARE_AUTHORIZE - 预授权' },
@@ -160,7 +160,7 @@
             <div class="form-group">
               <label>会话模式 (Session Mode)</label>
               <SmartSelect
-                v-model="checkoutData.sessionMode"
+                v-model="checkoutData.sessionMode" 
                 :options="[
                   { value: 'HOSTED', label: 'HOSTED - 托管模式' },
                   { value: 'COMPONENT', label: 'COMPONENT - 组件模式' },
@@ -335,13 +335,22 @@
           <div class="section-header">
             <h3>账单信息 (Billing Info)</h3>
             <div class="section-header-actions">
+              <div class="section-header-buttons">
+                <SmartSelect
+                  v-model="selectedBillMock"
+                  :options="billMockOptions"
+                  placeholder="选择预设数据"
+                  style="width: 180px;"
+                  :disabled="!checkoutData.enableBillInfo || !mockDataLoaded"
+                />
               <button 
                 @click="generateAllBillInfo" 
                 class="btn-small btn-random-section"
-                :disabled="!checkoutData.enableBillInfo"
+                  :disabled="!checkoutData.enableBillInfo || !mockDataLoaded"
               >
                 随机生成
               </button>
+              </div>
               <label class="toggle-switch">
                 <input type="checkbox" v-model="checkoutData.enableBillInfo" />
                 <span class="toggle-slider"></span>
@@ -405,7 +414,7 @@
             <div class="form-group">
               <label>账单国家 (Country)</label>
               <SmartSelect
-                v-model="checkoutData.billCountry"
+                v-model="checkoutData.billCountry" 
                 :options="[
                   { value: 'CN', label: 'CN - 中国' },
                   { value: 'US', label: 'US - 美国' },
@@ -475,7 +484,7 @@
             <div class="form-group">
               <label>地址收集 (Address Collection)</label>
               <SmartSelect
-                v-model="checkoutData.billAddressCollection"
+                v-model="checkoutData.billAddressCollection" 
                 :options="[
                   { value: 'REQUIRED', label: 'REQUIRED - 必填' },
                   { value: 'AUTO', label: 'AUTO - 自动' }
@@ -491,13 +500,22 @@
           <div class="section-header">
             <h3>收货信息 (Shipping Info)</h3>
             <div class="section-header-actions">
+              <div class="section-header-buttons">
+                <SmartSelect
+                  v-model="selectedShipMock"
+                  :options="shipMockOptions"
+                  placeholder="选择预设数据"
+                  style="width: 180px;"
+                  :disabled="!checkoutData.enableShipInfo || !mockDataLoaded"
+                />
               <button 
                 @click="generateAllShipInfo" 
                 class="btn-small btn-random-section"
-                :disabled="!checkoutData.enableShipInfo"
+                  :disabled="!checkoutData.enableShipInfo || !mockDataLoaded"
               >
                 随机生成
               </button>
+              </div>
               <label class="toggle-switch">
                 <input type="checkbox" v-model="checkoutData.enableShipInfo" />
                 <span class="toggle-slider"></span>
@@ -561,7 +579,7 @@
             <div class="form-group">
               <label>收货国家 (Country)</label>
               <SmartSelect
-                v-model="checkoutData.shipCountry"
+                v-model="checkoutData.shipCountry" 
                 :options="[
                   { value: 'CN', label: 'CN - 中国' },
                   { value: 'US', label: 'US - 美国' },
@@ -768,6 +786,7 @@ import { useRouter } from 'vue-router'
 import Toast from './Toast.vue'
 import SmartSelect from './SmartSelect.vue'
 import { showError, showSuccess, showInfo } from '../utils/toast'
+import { getAllPersonalInfo } from '../services/mockDataManager'
 import { useNavigation } from '../composables/useNavigation'
 import { useMerchantConfig } from '../composables/useMerchantConfig'
 import { payKKaCheckoutApi } from '../services/paykkaCheckoutApi'
@@ -833,10 +852,10 @@ const clearApiConfig = () => {
 // 填充API配置（保留用于其他地方）
 const fillApiConfig = (config) => {
   if (config) {
-    apiConfig.baseUrl = config.baseUrl || 'https://openapi-dev.paykka.com'
-    apiConfig.merchantId = config.merchantId
-    apiConfig.appId = config.appId
-    apiConfig.privateKey = config.privateKey
+  apiConfig.baseUrl = config.baseUrl || 'https://openapi-dev.paykka.com'
+  apiConfig.merchantId = config.merchantId
+  apiConfig.appId = config.appId
+  apiConfig.privateKey = config.privateKey
   }
 }
 
@@ -1003,6 +1022,12 @@ const checkoutData = reactive({
 
 const result = ref(null)
 
+// Mock数据相关
+const mockData = ref(null)
+const mockDataLoaded = ref(false)
+const selectedBillMock = ref('')
+const selectedShipMock = ref('')
+
 // JSON展示相关
 const isJsonCollapsed = ref(false)
 const editableJson = ref('')
@@ -1151,35 +1176,273 @@ const generateAllCustomerInfo = () => {
 
 // orderIp 和 customerAddress 已移除，order_ip 在 customer 对象中自动生成
 
-// 批量生成所有账单信息
-const generateAllBillInfo = () => {
-  checkoutData.billFirstName = generateRandomFirstName()
-  checkoutData.billLastName = generateRandomLastName()
-  checkoutData.billEmail = generateRandomEmailUtil('bill')
-  checkoutData.billPhone = generateRandomPhoneUtil('us')
-  checkoutData.billAddressLine1 = generateRandomAddressUtil('en')
-  checkoutData.billCountry = generateRandomCountryUtil()
-  checkoutData.billState = generateRandomStateUtil(checkoutData.billCountry || 'US')
-  checkoutData.billCity = generateRandomCityUtil(checkoutData.billCountry || 'US')
-  checkoutData.billPostalCode = generateRandomPostalCodeUtil()
-  checkoutData.billAreaCode = generateRandomAreaCodeUtil(checkoutData.billCountry || 'CN')
+// Mock数据选项（合并 mock_data.json 和用户添加的个人信息）
+const billMockOptions = computed(() => {
+  const options = []
+  let index = 0
+  
+  // 首先添加 mock_data.json 中的个人信息（预设数据）
+  if (mockData.value && mockData.value.personalInfo && mockData.value.personalInfo.length > 0) {
+    mockData.value.personalInfo.forEach((item) => {
+      const fullName = `${item.firstName} ${item.lastName}`
+      const displayLabel = `${fullName} - ${item.city}, ${item.country}`
+      const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
+      options.push({
+        value: `json_${index}`,
+        label: displayLabel,
+        searchText: searchText,
+        displayName: fullName,
+        source: 'json',
+        dataIndex: index
+      })
+      index++
+    })
+  }
+  
+  // 然后添加用户添加的个人信息（localStorage）
+  try {
+    const userPersonalInfo = getAllPersonalInfo()
+    if (userPersonalInfo && userPersonalInfo.length > 0) {
+      userPersonalInfo.forEach((item) => {
+        const fullName = `${item.firstName} ${item.lastName}`
+        const displayLabel = `${fullName} - ${item.city}, ${item.country}`
+        const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
+        options.push({
+          value: `user_${item.id || index}`,
+          label: displayLabel,
+          searchText: searchText,
+          displayName: fullName,
+          source: 'user',
+          dataIndex: index,
+          userData: item
+        })
+        index++
+      })
+    }
+  } catch (error) {
+    console.error('获取用户个人信息失败:', error)
+  }
+  
+  return options
+})
+
+const shipMockOptions = computed(() => {
+  const options = []
+  let index = 0
+  
+  // 首先添加 mock_data.json 中的个人信息（预设数据）
+  if (mockData.value && mockData.value.personalInfo && mockData.value.personalInfo.length > 0) {
+    mockData.value.personalInfo.forEach((item) => {
+      const fullName = `${item.firstName} ${item.lastName}`
+      const displayLabel = `${fullName} - ${item.city}, ${item.country}`
+      const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
+      options.push({
+        value: `json_${index}`,
+        label: displayLabel,
+        searchText: searchText,
+        displayName: fullName,
+        source: 'json',
+        dataIndex: index
+      })
+      index++
+    })
+  }
+  
+  // 然后添加用户添加的个人信息（localStorage）
+  try {
+    const userPersonalInfo = getAllPersonalInfo()
+    if (userPersonalInfo && userPersonalInfo.length > 0) {
+      userPersonalInfo.forEach((item) => {
+        const fullName = `${item.firstName} ${item.lastName}`
+        const displayLabel = `${fullName} - ${item.city}, ${item.country}`
+        const searchText = `${fullName} ${item.country} ${item.city} ${item.firstName} ${item.lastName}`.toLowerCase()
+        options.push({
+          value: `user_${item.id || index}`,
+          label: displayLabel,
+          searchText: searchText,
+          displayName: fullName,
+          source: 'user',
+          dataIndex: index,
+          userData: item
+        })
+        index++
+      })
+    }
+  } catch (error) {
+    console.error('获取用户个人信息失败:', error)
+  }
+  
+  return options
+})
+
+// 从Mock数据应用账单信息
+const applyBillFromMock = (value) => {
+  let item = null
+  
+  // 根据 value 判断数据来源
+  if (value.startsWith('json_')) {
+    // 来自 mock_data.json
+    const index = parseInt(value.replace('json_', ''))
+    if (mockData.value && mockData.value.personalInfo && mockData.value.personalInfo[index]) {
+      item = mockData.value.personalInfo[index]
+    }
+  } else if (value.startsWith('user_')) {
+    // 来自用户添加的个人信息
+    const id = value.replace('user_', '')
+    const userPersonalInfo = getAllPersonalInfo()
+    item = userPersonalInfo.find(p => p.id === id)
+  }
+  
+  if (!item) {
+    return
+  }
+  
+  checkoutData.billFirstName = item.firstName
+  checkoutData.billLastName = item.lastName
+  checkoutData.billEmail = item.email
+  checkoutData.billPhone = item.phone
+  checkoutData.billAddressLine1 = item.addressLine1
+  checkoutData.billCountry = item.country
+  checkoutData.billState = item.state
+  checkoutData.billCity = item.city
+  checkoutData.billPostalCode = item.postalCode
+  checkoutData.billAreaCode = item.areaCode
   checkoutData.billDescriptor = `DESC${Math.random().toString(36).substring(2, 8).toUpperCase()}`
   const options = ['REQUIRED', 'AUTO']
   checkoutData.billAddressCollection = options[Math.floor(Math.random() * options.length)]
 }
 
+// 从Mock数据应用收货信息
+const applyShipFromMock = (value) => {
+  let item = null
+  
+  // 根据 value 判断数据来源
+  if (value.startsWith('json_')) {
+    // 来自 mock_data.json
+    const index = parseInt(value.replace('json_', ''))
+    if (mockData.value && mockData.value.personalInfo && mockData.value.personalInfo[index]) {
+      item = mockData.value.personalInfo[index]
+    }
+  } else if (value.startsWith('user_')) {
+    // 来自用户添加的个人信息
+    const id = value.replace('user_', '')
+    const userPersonalInfo = getAllPersonalInfo()
+    item = userPersonalInfo.find(p => p.id === id)
+  }
+  
+  if (!item) {
+    return
+  }
+  
+  checkoutData.shipFirstName = item.firstName
+  checkoutData.shipLastName = item.lastName
+  checkoutData.shipEmail = item.email
+  checkoutData.shipPhone = item.phone
+  checkoutData.shipAddressLine1 = item.addressLine1
+  checkoutData.shipCountry = item.country
+  checkoutData.shipState = item.state
+  checkoutData.shipCity = item.city
+  checkoutData.shipPostalCode = item.postalCode
+  checkoutData.shipAreaCode = item.areaCode
+}
+
+// 批量生成所有账单信息
+const generateAllBillInfo = (forceRandom = false) => {
+  if (!forceRandom && selectedBillMock.value) {
+    // 如果选择了预设数据，应用该数据
+    applyBillFromMock(selectedBillMock.value)
+    showSuccess('已应用预设账单信息')
+  } else {
+    // 合并所有可用的个人信息数据
+    const allPersonalInfo = []
+    if (mockDataLoaded.value && mockData.value && mockData.value.personalInfo) {
+      allPersonalInfo.push(...mockData.value.personalInfo.map((item, index) => ({ ...item, _source: 'json', _index: index })))
+    }
+    try {
+      const userPersonalInfo = getAllPersonalInfo()
+      if (userPersonalInfo && userPersonalInfo.length > 0) {
+        allPersonalInfo.push(...userPersonalInfo.map(item => ({ ...item, _source: 'user', _id: item.id })))
+      }
+    } catch (error) {
+      console.error('获取用户个人信息失败:', error)
+    }
+    
+    if (allPersonalInfo.length > 0) {
+      // 从所有数据中随机选择
+      const randomItem = allPersonalInfo[Math.floor(Math.random() * allPersonalInfo.length)]
+      if (randomItem._source === 'json') {
+        selectedBillMock.value = `json_${randomItem._index}`
+      } else {
+        selectedBillMock.value = `user_${randomItem._id}`
+      }
+      applyBillFromMock(selectedBillMock.value)
+      showSuccess('已随机选择预设账单信息')
+    } else {
+      // 否则使用随机生成
+      checkoutData.billFirstName = generateRandomFirstName()
+      checkoutData.billLastName = generateRandomLastName()
+      checkoutData.billEmail = generateRandomEmailUtil('bill')
+      checkoutData.billPhone = generateRandomPhoneUtil('us')
+      checkoutData.billAddressLine1 = generateRandomAddressUtil('en')
+      checkoutData.billCountry = generateRandomCountryUtil()
+      checkoutData.billState = generateRandomStateUtil(checkoutData.billCountry || 'US')
+      checkoutData.billCity = generateRandomCityUtil(checkoutData.billCountry || 'US')
+      checkoutData.billPostalCode = generateRandomPostalCodeUtil()
+      checkoutData.billAreaCode = generateRandomAreaCodeUtil(checkoutData.billCountry || 'CN')
+      checkoutData.billDescriptor = `DESC${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+      const options = ['REQUIRED', 'AUTO']
+      checkoutData.billAddressCollection = options[Math.floor(Math.random() * options.length)]
+      selectedBillMock.value = ''
+    }
+  }
+}
+
 // 批量生成所有收货信息
-const generateAllShipInfo = () => {
-  checkoutData.shipFirstName = generateRandomFirstName()
-  checkoutData.shipLastName = generateRandomLastName()
-  checkoutData.shipEmail = generateRandomEmailUtil('ship')
-  checkoutData.shipPhone = generateRandomPhoneUtil('fr')
-  checkoutData.shipAddressLine1 = generateRandomAddressUtil('en')
-  checkoutData.shipCountry = generateRandomCountryUtil()
-  checkoutData.shipState = generateRandomStateUtil(checkoutData.shipCountry || 'FR')
-  checkoutData.shipCity = generateRandomCityUtil(checkoutData.shipCountry || 'FR')
-  checkoutData.shipPostalCode = generateRandomPostalCodeUtil()
-  checkoutData.shipAreaCode = generateRandomAreaCodeUtil(checkoutData.shipCountry || 'FR')
+const generateAllShipInfo = (forceRandom = false) => {
+  if (!forceRandom && selectedShipMock.value) {
+    // 如果选择了预设数据，应用该数据
+    applyShipFromMock(selectedShipMock.value)
+    showSuccess('已应用预设收货信息')
+  } else {
+    // 合并所有可用的个人信息数据
+    const allPersonalInfo = []
+    if (mockDataLoaded.value && mockData.value && mockData.value.personalInfo) {
+      allPersonalInfo.push(...mockData.value.personalInfo.map((item, index) => ({ ...item, _source: 'json', _index: index })))
+    }
+    try {
+      const userPersonalInfo = getAllPersonalInfo()
+      if (userPersonalInfo && userPersonalInfo.length > 0) {
+        allPersonalInfo.push(...userPersonalInfo.map(item => ({ ...item, _source: 'user', _id: item.id })))
+      }
+    } catch (error) {
+      console.error('获取用户个人信息失败:', error)
+    }
+    
+    if (allPersonalInfo.length > 0) {
+      // 从所有数据中随机选择
+      const randomItem = allPersonalInfo[Math.floor(Math.random() * allPersonalInfo.length)]
+      if (randomItem._source === 'json') {
+        selectedShipMock.value = `json_${randomItem._index}`
+      } else {
+        selectedShipMock.value = `user_${randomItem._id}`
+      }
+      applyShipFromMock(selectedShipMock.value)
+      showSuccess('已随机选择预设收货信息')
+    } else {
+      // 否则使用随机生成
+      checkoutData.shipFirstName = generateRandomFirstName()
+      checkoutData.shipLastName = generateRandomLastName()
+      checkoutData.shipEmail = generateRandomEmailUtil('ship')
+      checkoutData.shipPhone = generateRandomPhoneUtil('fr')
+      checkoutData.shipAddressLine1 = generateRandomAddressUtil('en')
+      checkoutData.shipCountry = generateRandomCountryUtil()
+      checkoutData.shipState = generateRandomStateUtil(checkoutData.shipCountry || 'FR')
+      checkoutData.shipCity = generateRandomCityUtil(checkoutData.shipCountry || 'FR')
+      checkoutData.shipPostalCode = generateRandomPostalCodeUtil()
+      checkoutData.shipAreaCode = generateRandomAreaCodeUtil(checkoutData.shipCountry || 'FR')
+      selectedShipMock.value = ''
+    }
+  }
 }
 
 // 一键随机生成所有参数
@@ -1346,8 +1609,8 @@ const validateJsonData = () => {
     // 验证必填字段
     if (!checkoutData.customerName || checkoutData.customerName.trim() === '') {
       showError('客户姓名 (Name) 不能为空')
-      return null
-    }
+        return null
+      }
     if (!checkoutData.customerEmail || checkoutData.customerEmail.trim() === '') {
       showError('客户邮箱 (Email) 不能为空')
       return null
@@ -1860,8 +2123,43 @@ const createCheckout = async () => {
 
 // 组件挂载时加载商户配置
 // 组件挂载时加载商户配置
+// 加载Mock数据
+const loadMockData = async () => {
+  try {
+    const response = await fetch('/mock-data/mock_data.json')
+    if (!response.ok) {
+      throw new Error('加载Mock数据失败')
+    }
+    const data = await response.json()
+    mockData.value = data
+    mockDataLoaded.value = true
+    console.log('Mock数据加载成功:', data.personalInfo?.length || 0, '条个人信息')
+  } catch (error) {
+    console.error('加载Mock数据失败:', error)
+    mockDataLoaded.value = false
+    // 不显示错误提示，允许使用原来的随机生成方法
+  }
+}
+
+// 监听账单信息Mock数据选择，自动应用
+watch(selectedBillMock, (newValue) => {
+  if (newValue && newValue !== '') {
+    applyBillFromMock(newValue)
+    showSuccess('已应用预设账单信息')
+  }
+})
+
+// 监听收货信息Mock数据选择，自动应用
+watch(selectedShipMock, (newValue) => {
+  if (newValue && newValue !== '') {
+    applyShipFromMock(newValue)
+    showSuccess('已应用预设收货信息')
+  }
+})
+
 onMounted(() => {
   loadMerchantConfigs()
+  loadMockData()
 })
 </script>
 
@@ -1994,6 +2292,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.8rem;
+}
+
+.section-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .btn-random-section {
